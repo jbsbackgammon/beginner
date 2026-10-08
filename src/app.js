@@ -291,22 +291,54 @@ function reportHTML(id){
  const columnWidths=`<colgroup><col style="width:7%"><col style="width:24%">${Array.from({length:columnCount},()=>`<col style="width:${dataWidth.toFixed(6)}%">`).join('')}</colgroup>`;
  return `<div class="report">${pdfHeading(id,rows.length)}<table class="report-data-table">${columnWidths}<thead><tr>${headers.map(h=>`<th>${displayHeader(h)}</th>`).join('')}</tr></thead><tbody>${tr||`<tr><td colspan="${headers.length}">成績データなし</td></tr>`}</tbody></table></div>`;
 }
-// A4 portrait: two columns by four rows, eight player cards per sheet.
-// Print the active event's ranking-eligible players, in ascending player-number order.
+// A4 portrait: two columns by four rows, eight individual results per sheet.
+// Within an event the circles follow their original match number, oldest first.
+// Overall uses ONLY the two adopted days, matching its published totals.
+function personalMatchSequence(eventId,row){
+ const days=eventId==='overall' ? (row.selectedDays||[]) : [eventId];
+ const dayOrder=new Map(EVENTS.map((e,i)=>[e.id,i]));
+ return ed().matches.filter(m=>days.includes(m.event)&&(m.a===row.id||m.b===row.id))
+  .sort((a,b)=>(dayOrder.get(a.event)??99)-(dayOrder.get(b.event)??99)
+     ||(Number(a.matchNo)||0)-(Number(b.matchNo)||0));
+}
+function personalResultDots(eventId,row){
+ const two=eventId==='two';
+ const matches=personalMatchSequence(eventId,row);
+ // Reserve no more than two lines; keep circles large while they fit.
+ const perLine=Math.ceil(matches.length/2);
+ const dot=Math.max(2.8,Math.min(6,95/Math.max(1,perLine)-0.8));
+ const dots=matches.map(m=>{
+  const mine=m.a===row.id?m.sa:m.sb;
+  const theirs=m.a===row.id?m.sb:m.sa;
+  const status=mine>theirs?'win':mine<theirs?'lose':'draw';
+  const score=two?'':Math.max(m.sa,m.sb);
+  return `<span class="personal-dot is-${status}" title="${esc(`${status==='win'?'勝':status==='lose'?'負':'引分'} ${m.sa}-${m.sb}`)}" aria-label="${esc(`${status==='win'?'勝':status==='lose'?'負':'引分'}${two?'':` ${score}点`}`)}">${score||''}</span>`;
+ }).join('');
+ return `<div class="personal-results" style="--personal-dot-size:${dot.toFixed(2)}mm">${dots}</div>`;
+}
 function personalReportHTML(id){
  const rows=standings(ed(),id).slice().sort((a,b)=>a.id-b.id);
- const two=id==='two',overall=id==='overall',label=eventById(id)?.label||'';
- const subtitle=id==='overall'?dateFor('day3'):dateFor(id);
+ const two=id==='two',label=eventById(id)?.label||'';
+ const date=id==='overall'?dateFor('day3'):dateFor(id);
  const cell=r=>{
   if(!r)return `<article class="personal-card is-blank" aria-hidden="true"></article>`;
+  const history=personalMatchSequence(id,r);
+  // 2pt standings do not use points for rankings, but individual cards can
+  // display their actual played-game points without affecting those rankings.
+  let scored=r.scored,conceded=r.conceded;
+  if(two){
+   scored=history.reduce((n,m)=>n+(m.a===r.id?m.sa:m.sb),0);
+   conceded=-history.reduce((n,m)=>n+(m.a===r.id?m.sb:m.sa),0);
+  }
+  const diff=scored+conceded;
   return `<article class="personal-card">
-   <div class="personal-title">${esc(label)}　個人成績</div>
-   <div class="personal-name"><span>#${r.id}</span><strong>${esc(r.name)}</strong></div>
-   <div class="personal-standing"><b>第${r.rank}位</b><span>${r.matches}試合　${r.wins}勝 ${r.losses}敗${two?` ${r.draws}引分`:''}</span></div>
-   <div class="personal-stats"><span>勝越 <b>${r.spread>0?'+':''}${r.spread}</b></span><span>勝率 <b>${formatRate(r.rate)}</b></span>${two?'':`<span>得失点差 <b>${r.diff>0?'+':''}${r.diff}</b></span>`}</div>
-   ${two?'':`<div class="personal-extra">得点 ${r.scored}　失点 ${r.conceded}</div>`}
-   ${overall?`<div class="personal-days">採用Day　${adoptedDayIcons(r)}</div>`:''}
-   <div class="personal-meta">${esc([subtitle,venueFor(),'主催 日本バックギャモン協会'].filter(Boolean).join('・'))}</div>
+   <div class="personal-event-title">${esc(pdfEditionTitle())}</div>
+   <div class="personal-event-detail">${esc(label)}　個人成績 #${r.id}</div>
+   <div class="personal-rank">第${r.rank}位</div>
+   <div class="personal-summary">${r.matches}試合　${r.wins}勝${r.losses}敗${two?` ${r.draws}引分`:''}　勝越${r.spread}　勝率${formatRate(r.rate)}</div>
+   <div class="personal-score-totals">得点${scored}　失点${conceded}　得失点差${diff}</div>
+   ${personalResultDots(id,r)}
+   <div class="personal-footer"><div>${esc([date,venueFor()].filter(Boolean).join('　'))}</div><div>主催　日本バックギャモン協会</div></div>
   </article>`;
  };
  if(!rows.length)return `<div class="personal-sheets"><section class="personal-sheet"><div class="personal-empty">対象の成績がありません</div></section></div>`;

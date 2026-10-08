@@ -990,3 +990,32 @@ html{scroll-padding-top:100px}
     print-color-adjust:exact;
   }
 }
+
+
+/* v44: personal reports use the entire A4 sheet, edge-to-edge cut lines.
+   These selectors are deliberately scoped to personal PDF, so full-results
+   PDF margins, table styles and layout remain unchanged. */
+@media print {
+  #print-area .personal-sheets {width:210mm!important;margin:0!important;padding:0!important;color:#000!important}
+  #print-area .personal-sheet {width:210mm!important;height:297mm!important;padding:0!important;margin:0!important;overflow:hidden!important;break-inside:avoid;page-break-inside:avoid}
+  #print-area .personal-grid {display:grid!important;grid-template-columns:repeat(2,105mm)!important;grid-template-rows:repeat(4,74.25mm)!important;width:210mm!important;height:297mm!important;margin:0!important;padding:0!important;gap:0!important;border:0!important}
+  #print-area .personal-card {width:105mm!important;height:74.25mm!important;padding:3.6mm 3.8mm 2.8mm!important;gap:0!important;margin:0!important;box-sizing:border-box!important;border:0!important;border-right:0.25mm solid #999!important;border-bottom:0.25mm solid #999!important;display:flex!important;flex-direction:column!important;overflow:hidden!important;color:#000!important;font-family:"Noto Sans JP","Hiragino Sans","Yu Gothic",sans-serif!important;background:#fff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  #print-area .personal-card.is-blank {background:#fff!important}
+  #print-area .personal-card .personal-event-title {font-size:10pt;font-weight:800;line-height:1.25;color:#000;text-align:center;white-space:nowrap;letter-spacing:-.015em}
+  #print-area .personal-card .personal-event-detail {font-size:9.7pt;font-weight:700;line-height:1.4;color:#000;text-align:center;margin-top:.9mm;overflow-wrap:anywhere}
+  #print-area .personal-card .personal-rank {font-size:21pt;font-weight:900;line-height:1.2;color:#000;text-align:center;margin:2.6mm 0 2mm}
+  #print-area .personal-card .personal-summary {font-size:9.1pt;font-weight:650;line-height:1.55;color:#000;text-align:center;white-space:nowrap;letter-spacing:-.04em}
+  #print-area .personal-card .personal-score-totals {font-size:9.1pt;line-height:1.55;color:#000;text-align:center;white-space:nowrap}
+  #print-area .personal-card .personal-results {display:flex;flex-wrap:wrap;align-content:flex-start;justify-content:flex-start;gap:.8mm;margin-top:2.6mm;max-height:calc(var(--personal-dot-size) * 2 + .8mm);overflow:hidden;width:100%;color:#000}
+  #print-area .personal-card .personal-dot {display:inline-flex;flex:0 0 var(--personal-dot-size);width:var(--personal-dot-size);height:var(--personal-dot-size);border:0.27mm solid #000;border-radius:50%;align-items:center;justify-content:center;box-sizing:border-box;font-size:calc(var(--personal-dot-size) * .51);line-height:1;font-weight:800;color:#000;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  #print-area .personal-card .personal-dot.is-lose {background:#000;color:#fff}
+  #print-area .personal-card .personal-dot.is-draw {background:#fff;border-style:double;border-width:.8mm;color:#000}
+  #print-area .personal-card .personal-footer {margin-top:auto;padding-top:1.6mm;font-size:8.3pt;line-height:1.5;color:#000;text-align:center}
+  #print-area .personal-card .personal-footer div {color:#000}
+  #print-area .personal-empty{width:210mm;text-align:center;color:#000}
+}
+
+@media print {
+  #print-area .personal-card:nth-child(odd) {border-left:0.25mm solid #999!important}
+  #print-area .personal-card:nth-child(-n+2) {border-top:0.25mm solid #999!important}
+}

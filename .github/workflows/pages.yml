@@ -1,0 +1,41 @@
+name: GitHub Pages 公開
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: github-pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: 公開
+    runs-on: ubuntu-24.04
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: ソースを取得
+        uses: actions/checkout@v6
+
+      - name: 公開ファイルを生成（キャッシュ対策）
+        run: python3 build_pages.py --output _site --revision "$GITHUB_SHA"
+
+      - name: GitHub Pages を設定
+        uses: actions/configure-pages@v6
+
+      - name: 公開データをアップロード
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: _site
+
+      - name: GitHub Pages に公開
+        id: deployment
+        uses: actions/deploy-pages@v5

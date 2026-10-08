@@ -8,10 +8,10 @@ test('2pt event uses shortened official name without changing its ID',()=>{
   assert.equal(event.label,'2ptマッチラウンドロビン');
   assert.equal(event.kind,'two');
 });
-test('sticky table header keeps line while scrolling, including Chromium collapsed-border fix',()=>{
+test('sticky table header keeps TOP and BOTTOM one-pixel lines when scrolling',()=>{
   assert.match(css,/#app \.data-table \{\s*border-collapse:separate!important;/);
   assert.match(css,/#app \.data-table thead th \{[\s\S]*?border-bottom:1px solid #9eb3a9!important;/);
-  assert.match(css,/#app \.data-table thead th::after \{[\s\S]*?height:2px;/);
+  assert.match(css, /#app \.data-table thead th \{[^}]*border-top:1px solid #9eb3a9!important;/s);
 });
 
 

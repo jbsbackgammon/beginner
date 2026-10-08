@@ -39,3 +39,20 @@ test('generates distinct random score patterns and can build multiple editions',
  assert.equal(b.matches.length,200);
  assert.deepEqual(a.players.map(p=>p.id),b.players.map(p=>p.id));
 });
+
+
+test('creates fifty distinct Japanese test names with matching readings, randomized each time',()=>{
+ const d=createDemoEdition();
+ assert.equal(new Set(d.players.map(p=>p.name)).size,50);
+ for(const p of d.players){
+  assert.match(p.name,/^[^\s]+ [^\s]+$/);
+  assert.match(p.kana,/^[ぁ-ゖー]+ [ぁ-ゖー]+$/u);
+  assert.ok(!p.name.startsWith('テスト選手'));
+ }
+ // Injected random values make the contrast deterministic, not probabilistic.
+ const first=createDemoEdition(()=>0);
+ const second=createDemoEdition(()=>0.999999);
+ assert.notDeepEqual(first.players.map(p=>p.name),second.players.map(p=>p.name));
+ assert.equal(first.matches.length,200);
+ assert.equal(second.matches.length,200);
+});

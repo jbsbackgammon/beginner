@@ -73,7 +73,31 @@ export function overallStandings(edition) {
 }
 export function entryCount(edition,eventId){return (edition.matches||[]).filter(m=>m.event===eventId).length}
 
-/** List pairs of players who have both played in this event but have never met. */
+/** Reservations live separately from match results; older saved data has no such field. */
+export function activePairings(edition, eventId) {
+  return (edition.pendingPairings || []).filter(p=>p.event===eventId);
+}
+
+/** Reserve both players until a result is entered (or the reservation is cancelled). */
+export function reservePairing(edition, eventId, a, b) {
+  if (!unplayedPairs(edition,eventId).some(p=>p.a===Math.min(a,b)&&p.b===Math.max(a,b))) return false;
+  if (!Array.isArray(edition.pendingPairings)) edition.pendingPairings=[];
+  edition.pendingPairings.push({event:eventId,a:Math.min(a,b),b:Math.max(a,b)});
+  return true;
+}
+
+export function cancelPairing(edition, eventId, a, b) {
+  const old=edition.pendingPairings||[];
+  edition.pendingPairings=old.filter(p=>!(p.event===eventId && ((p.a===a&&p.b===b)||(p.a===b&&p.b===a))));
+  return old.length!==edition.pendingPairings.length;
+}
+
+/** A registered result frees the match's participants from any reserved pairing. */
+export function finishPairing(edition, eventId, a, b) {
+  edition.pendingPairings=(edition.pendingPairings||[]).filter(p=>p.event!==eventId || (![a,b].includes(p.a)&&![a,b].includes(p.b)));
+}
+
+/** List pairs of players who have both played in this event but have never met and are not busy. */
 export function unplayedPairs(edition, eventId) {
   if (!eventById(eventId) || eventId==='overall') return [];
   const matches=(edition.matches||[]).filter(m=>m.event===eventId);
@@ -86,7 +110,8 @@ export function unplayedPairs(edition, eventId) {
     counts.set(m.b,(counts.get(m.b)||0)+1);
     played.add(key(m.a,m.b));
   }
-  const ids=[...counts.keys()].sort((a,b)=>a-b),pairs=[];
+  const busy=new Set(activePairings(edition,eventId).flatMap(p=>[p.a,p.b]));
+  const ids=[...counts.keys()].filter(id=>!busy.has(id)).sort((a,b)=>a-b),pairs=[];
   for (let i=0;i<ids.length;i++) for (let j=i+1;j<ids.length;j++) {
     const a=ids[i],b=ids[j];
     if (!played.has(key(a,b))) pairs.push({a,b,playedA:counts.get(a),playedB:counts.get(b)});

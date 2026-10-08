@@ -50,7 +50,7 @@ function historyTable(matches) {
   const rightClass=draw?'history-score-draw':'';
   return `<tr><td class="history-number">${m.matchNo}</td><td class="history-name">${esc(playerLabel(leftId))}</td><td class="history-score"><span class="${leftClass}">${esc(leftScore)}</span><span class="history-score-separator"> - </span><span class="${rightClass}">${esc(rightScore)}</span></td><td class="history-name">${esc(playerLabel(rightId))}</td><td class="row-actions"><button class="btn small" data-action="edit-match" data-id="${esc(m.id)}">修正</button> <button class="btn small danger" data-action="delete-match" data-id="${esc(m.id)}">削除</button></td></tr>`;
  }).join('');
- return shown.length?`<table class="data-table history-table"><colgroup><col class="history-col-number"><col class="history-col-player"><col class="history-col-score"><col class="history-col-player"><col class="history-col-actions"></colgroup><thead><tr><th>試合番号</th><th>選手名</th><th>結果</th><th>選手名</th><th>操作</th></tr></thead><tbody>${rows}</tbody></table>`:'<div class="empty">該当する試合がありません</div>';
+ return shown.length?`<table class="data-table history-table"><colgroup><col class="history-col-number"><col class="history-col-player"><col class="history-col-score"><col class="history-col-player"><col class="history-col-actions"></colgroup><thead><tr><th>試合</th><th>選手名</th><th>結果</th><th>選手名</th><th aria-label="操作"></th></tr></thead><tbody>${rows}</tbody></table>`:'<div class="empty">該当する試合がありません</div>';
 }
 
 function pairingTable(pairs){
@@ -60,7 +60,7 @@ function pairingTable(pairs){
  for(const id of waitingPlayerIds(ed(),activeEvent).filter(id=>!busyIds.has(id)))groups.set(id,[]);
  for(const pair of pairs){groups.get(pair.a)?.push(pair.b);groups.get(pair.b)?.push(pair.a)}
  const filtered=[...groups];
- const list=filtered.length?`<table class="data-table pairing-list"><thead><tr><th>対戦待ち</th><th>未対戦</th></tr></thead><tbody>${filtered.map(([id,opps])=>`<tr><td class="pairing-name"><div class="pairing-waiter"><span>${esc(playerLabel(id))}</span><button type="button" class="btn small pairing-remove" data-action="remove-waiting" data-id="${id}" aria-label="${esc(playerLabel(id))}を対戦待ちから削除">削除</button></div></td><td><div class="opponents">${opps.length?opps.sort((a,b)=>a-b).map(n=>`<button type="button" class="opponent-no" data-action="pick-pair" data-a="${id}" data-b="${n}" title="${esc(player(n)?.name||playerLabel(n))}" aria-label="${esc(playerLabel(n))}と対戦を組む">${n}</button>`).join(''):'<span class="muted">ー</span>'}</div></td></tr>`).join('')}</tbody></table>`:`<div class="empty">${busy.length?'対戦待ちの選手がいません':'対戦待ちの選手がいません'}</div>`;
+ const list=filtered.length?`<table class="data-table pairing-list"><thead><tr><th>対戦待ち</th><th>未対戦</th><th aria-label="操作"></th></tr></thead><tbody>${filtered.map(([id,opps])=>`<tr><td class="pairing-name">${esc(playerLabel(id))}</td><td class="pairing-opponents"><div class="opponents">${opps.length?opps.sort((a,b)=>a-b).map(n=>`<button type="button" class="opponent-no" data-action="pick-pair" data-a="${id}" data-b="${n}" title="${esc(player(n)?.name||playerLabel(n))}" aria-label="${esc(playerLabel(n))}と対戦を組む">${n}</button>`).join(''):'<span class="muted">ー</span>'}</div></td><td class="pairing-actions"><button type="button" class="btn small pairing-remove" data-action="remove-waiting" data-id="${id}" aria-label="${esc(playerLabel(id))}を対戦待ちから削除">削除</button></td></tr>`).join('')}</tbody></table>`:`<div class="empty">${busy.length?'対戦待ちの選手がいません':'対戦待ちの選手がいません'}</div>`;
  return list;
 }
 function matchPlayerField(side,id,label,winningSide){
@@ -85,7 +85,7 @@ function renderEntry(){
    ? `<div class="vs match-versus two-controls"><span class="versus-label">VS</span><button type="button" class="draw-button" data-draw-button aria-pressed="false">引分</button></div>`
    : `<span class="vs match-versus" aria-hidden="true">VS</span>`;
  const form=`<form id="match-form" data-kind="${e.kind}" data-winner="${winningSide}"><div class="scoreline ${e.kind==='two'?'two-entry':''}">${matchPlayerField('a',first,'左選手',winningSide)}${middle}${matchPlayerField('b',second,'右選手',winningSide)}</div><div class="result-row">${resultControl}<button type="submit" class="btn primary" disabled>${current?'結果を更新':'結果を登録'}</button></div>${current?'<div class="btnset"><button type="button" class="btn" data-action="cancel-match">編集を取り消す</button></div>':''}</form>`;
- return `<div class="entry-grid"><div class="entry-left"><section class="box entry-form"><h3>結果入力</h3>${form}</section><section class="box entry-pairings"><div class="section-head pairing-title"><h3>対戦斡旋</h3>${addControl}</div><div id="pair-results" class="table-scroll spaced pairing-scroll">${pairingTable(pairs)}</div></section></div><section class="box entry-history"><div class="section-head"><h3>結果履歴</h3></div><input id="history-filter" placeholder="選手名・番号で検索" value="${esc(historySearch)}" class="select-wide" aria-label="結果履歴検索"><div id="history-results" class="table-scroll spaced history-scroll">${historyTable(matches)}</div></section></div>`;
+ return `<div class="entry-grid"><div class="entry-left"><section class="box entry-form"><h3>結果入力</h3>${form}</section><section class="box entry-pairings"><div class="section-head pairing-title"><h3>対戦斡旋</h3>${addControl}</div><div id="pair-results" class="table-scroll spaced pairing-scroll">${pairingTable(pairs)}</div></section></div><section class="box entry-history"><div class="section-head history-title"><h3>結果履歴</h3><input id="history-filter" placeholder="選手名・番号で検索" value="${esc(historySearch)}" aria-label="結果履歴検索"></div><div id="history-results" class="table-scroll spaced history-scroll">${historyTable(matches)}</div></section></div>`;
 }
 function updateSubmitEnabled(form){
  const score=String(form.elements.namedItem('result')?.value||'');
@@ -109,9 +109,21 @@ function syncMatchPlayer(el){
  if(el.tagName==='SELECT'){number.value=select.value;return}
  const parsed=Number(number.value);select.value=number.value!==''&&player(parsed)?String(parsed):'';
 }
-function statsTable(eventId,preview=false){const rows=standings(ed(),eventId),isTwo=eventId==='two',overall=eventId==='overall';
+function statsTable(eventId,preview=false){
+ const rows=standings(ed(),eventId),isTwo=eventId==='two',overall=eventId==='overall';
  if(!rows.length)return '<div class="empty">表示できる成績がありません</div>';
- return `<div class="table-scroll"><table class="data-table"><thead><tr><th>順位</th><th>氏名</th><th>選手No.</th><th>試合</th><th>勝</th><th>負</th>${isTwo?'<th>引分</th>':''}<th>勝越</th><th>勝率</th>${!isTwo?'<th>得点</th><th>失点</th><th>得失点</th>':''}${overall?'<th>採用Day</th>':''}</tr></thead><tbody>${rows.map(r=>`<tr class="${r.rank<=3?'podium':''}"><td><strong>${r.rank}</strong></td><td class="player-name">${esc(r.name)}</td><td>${r.id}</td><td>${r.matches}</td><td>${r.wins}</td><td>${r.losses}</td>${isTwo?`<td>${r.draws}</td>`:''}<td class="${r.spread>=0?'pos':'neg'}">${r.spread>0?'+':''}${r.spread}</td><td>${formatRate(r.rate)}</td>${!isTwo?`<td>${r.scored}</td><td>${r.conceded}</td><td class="${r.diff>=0?'pos':'neg'}">${r.diff>0?'+':''}${r.diff}</td>`:''}${overall?`<td>${(r.selectedDays||[]).map(dayName).join('＋')}</td>`:''}</tr>`).join('')}</tbody></table></div>`;
+ const headers=['順位','氏名','選手No.','試合','勝','負',...(isTwo?['引分']:[]),'勝越','勝率',...(!isTwo?['得点','失点','得失点']:[]),...(overall?['採用Day']:[])];
+ const td=(label,value,cls='')=>`<td data-label="${label}"${cls?` class="${cls}"`:''}>${value}</td>`;
+ const html=rows.map(r=>{
+  const cells=[
+   td('順位',`<strong>${r.rank}</strong>`),td('氏名',esc(r.name),'player-name'),td('選手No.',r.id),td('試合',r.matches),td('勝',r.wins),td('負',r.losses),
+   ...(isTwo?[td('引分',r.draws)]:[]),td('勝越',`${r.spread>0?'+':''}${r.spread}`,r.spread>=0?'pos':'neg'),td('勝率',formatRate(r.rate)),
+   ...(!isTwo?[td('得点',r.scored),td('失点',r.conceded),td('得失点',`${r.diff>0?'+':''}${r.diff}`,r.diff>=0?'pos':'neg')]:[]),
+   ...(overall?[td('採用Day',(r.selectedDays||[]).map(dayName).join('＋'))]:[])
+  ];
+  return `<tr class="${r.rank<=3?'podium':''}">${cells.join('')}</tr>`;
+ });
+ return `<div class="table-scroll"><table class="data-table standings-table"><thead><tr>${headers.map(x=>`<th>${x}</th>`).join('')}</tr></thead><tbody>${html.join('')}</tbody></table></div>`;
 }
 function renderRank(){return `<div class="box">${statsTable(activeEvent)}</div>`}
 function rosterNumbers(e){
@@ -126,9 +138,9 @@ function renderPlayers(){
   const p=byId.get(id),active=!!p?.name?.trim();
   const cells=eventIds.map((event,i)=>{
    const attending=!!p?.entries?.includes(event);
-   return `<td><button type="button" class="roster-attendance ${attending?'attending':''}" data-roster-event="${event}" aria-pressed="${attending}" aria-label="No.${id} ${header[i]} ${attending?'出場':'未出場'}" ${active?'':'disabled'}>${attending?'出場':'ー'}</button></td>`;
+   return `<td data-label="${esc(header[i])}"><button type="button" class="roster-attendance ${attending?'attending':''}" data-roster-event="${event}" aria-pressed="${attending}" aria-label="No.${id} ${header[i]} ${attending?'出場':'未出場'}" ${active?'':'disabled'}>${attending?'出場':'ー'}</button></td>`;
   }).join('');
-  return `<tr data-roster-id="${id}" class="${active?'':'roster-inactive'}"><td class="roster-no">${id}</td><td><input type="text" data-roster-name aria-label="No.${id} 選手" autocomplete="off" maxlength="100" value="${esc(p?.name||'')}"></td><td><input type="text" data-roster-kana aria-label="No.${id} よみ" autocomplete="off" maxlength="100" value="${esc(p?.kana||'')}" ${active?'':'disabled'}></td>${cells}</tr>`;
+  return `<tr data-roster-id="${id}" class="${active?'':'roster-inactive'}"><td class="roster-no" data-label="番号">${id}</td><td data-label="選手"><input type="text" data-roster-name aria-label="No.${id} 選手" autocomplete="off" maxlength="100" value="${esc(p?.name||'')}"></td><td data-label="よみ"><input type="text" data-roster-kana aria-label="No.${id} よみ" autocomplete="off" maxlength="100" value="${esc(p?.kana||'')}" ${active?'':'disabled'}></td>${cells}</tr>`;
  }).join('');
  return `<div class="box roster-box"><div class="table-scroll roster-scroll"><table class="data-table roster-matrix"><thead><tr><th>番号</th><th>選手</th><th>よみ</th>${header.map(x=>`<th>${x}</th>`).join('')}</tr></thead><tbody>${rows}</tbody><tfoot><tr class="roster-add-row"><td colspan="8"><button type="button" class="btn" data-action="add-roster-row">次を追加</button></td></tr></tfoot></table></div></div>`;
 }
@@ -178,8 +190,14 @@ function rosterEventChange(button){
  save();
 }
 
-function reportHTML(id){const e=eventById(id);const rows=standings(ed(),id);const date=id==='overall'? dateFor('day3'):dateFor(id);const isTwo=id==='two',overall=id==='overall';
- return `<div class="report"><div class="report-heading"><div class="smallcaps">JAPAN BACKGAMMON SOCIETY</div><h2>${esc(ed().name)}　${esc(e.label)}　成績表</h2><small>${esc(date)}　／　日本バックギャモン協会</small></div><table><thead><tr><th>順位</th><th>氏名</th><th>No.</th><th>試合</th><th>勝</th><th>負</th>${isTwo?'<th>引</th>':''}<th>勝越</th><th>勝率</th>${!isTwo?'<th>得点</th><th>失点</th><th>得失点</th>':''}${overall?'<th>採用Day</th>':''}</tr></thead><tbody>${rows.map(r=>`<tr><td>${r.rank}</td><td>${esc(r.name)}</td><td>${r.id}</td><td>${r.matches}</td><td>${r.wins}</td><td>${r.losses}</td>${isTwo?`<td>${r.draws}</td>`:''}<td>${r.spread>0?'+':''}${r.spread}</td><td>${formatRate(r.rate)}</td>${!isTwo?`<td>${r.scored}</td><td>${r.conceded}</td><td>${r.diff>0?'+':''}${r.diff}</td>`:''}${overall?`<td>${r.selectedDays.map(dayName).join('＋')}</td>`:''}</tr>`).join('')||`<tr><td colspan="12">成績データなし</td></tr>`}</tbody></table><p class="muted" style="margin-top:12px">${rows.length}名　／　${isTwo?'勝越→勝率→試合数':'得失点差→勝越→勝率'}順</p></div>`;
+function reportHTML(id){
+ const e=eventById(id),rows=standings(ed(),id),date=id==='overall'?dateFor('day3'):dateFor(id),isTwo=id==='two',overall=id==='overall';
+ const headers=['順位','氏名','No.','試合','勝','負',...(isTwo?['引']:[]),'勝越','勝率',...(!isTwo?['得点','失点','得失点']:[]),...(overall?['採用Day']:[])];
+ const tr=rows.map(r=>{
+  const vals=[r.rank,esc(r.name),r.id,r.matches,r.wins,r.losses,...(isTwo?[r.draws]:[]),`${r.spread>0?'+':''}${r.spread}`,formatRate(r.rate),...(!isTwo?[r.scored,r.conceded,`${r.diff>0?'+':''}${r.diff}`]:[]),...(overall?[(r.selectedDays||[]).map(dayName).join('＋')]:[])];
+  return `<tr>${vals.map((v,i)=>`<td data-label="${headers[i]}">${v}</td>`).join('')}</tr>`;
+ }).join('');
+ return `<div class="report"><div class="report-heading"><div class="smallcaps">JAPAN BACKGAMMON SOCIETY</div><h2>${esc(ed().name)}　${esc(e.label)}　成績表</h2><small>${esc(date)}　／　日本バックギャモン協会</small></div><table class="report-data-table"><thead><tr>${headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${tr||`<tr><td colspan="12">成績データなし</td></tr>`}</tbody></table><p class="muted" style="margin-top:12px">${rows.length}名　／　${isTwo?'勝越→勝率→試合数':'得失点差→勝越→勝率'}順</p></div>`;
 }
 function renderExport(){
  return `<div class="box report-settings">

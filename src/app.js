@@ -3,7 +3,7 @@ const KEY='jbs-beginner-v1';
 const eventIds=EVENTS.filter(e=>e.id!=='overall').map(e=>e.id);
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const DEFAULT_EDITION_NAME='BACKGAMMON FESTIVAL 20XX';
+const DEFAULT_EDITION_NAME='BACKGAMMON CLASSIC 2026';
 const DEFAULT_VENUE='ワイヤーズホテル品川シーサイド';
 const initial=()=>({schema:1,activeEditionId:'classic-2026',editions:[{id:'classic-2026',name:DEFAULT_EDITION_NAME,venue:DEFAULT_VENUE,players:[],matches:[],pendingPairings:[],dates:Object.fromEntries(EVENTS.map(e=>[e.id,e.date]))}]});
 let data;try{data=JSON.parse(localStorage.getItem(KEY)||'null')}catch{data=null}
@@ -13,7 +13,7 @@ for(const edition of data.editions){
   ensureMatchNumbers(edition);
   migrateReservedWaiting(edition);
   // Change only the prefilled starter label; never overwrite a customized name.
-  if(edition.id==='classic-2026' && edition.name==='BACKGAMMON CLASSIC 2026') edition.name=DEFAULT_EDITION_NAME;
+  if(edition.id==='classic-2026' && edition.name==='BACKGAMMON FESTIVAL 20XX') edition.name=DEFAULT_EDITION_NAME;
 }
 // Backfill match numbers into older browser data without changing its storage key.
 try{localStorage.setItem(KEY,JSON.stringify(data))}catch{ /* Save errors are reported on edit. */ }
@@ -40,8 +40,8 @@ function adoptedDayIcons(row){
  return `<span class="adopted-days" aria-label="採用Day">${content}</span>`;
 }
 function pdfEditionTitle(){
- // The blank template has a generic name; its 2026 competition PDF uses the official event title.
- return ed().name===DEFAULT_EDITION_NAME?'BACKGAMMON CLASSIC 2026':ed().name;
+ // Use the entered tournament name unchanged in both PDF exports.
+ return ed().name;
 }
 function venueFor(){return typeof ed().venue==='string'?ed().venue:DEFAULT_VENUE}
 function pdfHeading(eventId, participantCount){
@@ -304,17 +304,23 @@ function personalMatchSequence(eventId,row){
 function personalResultDots(eventId,row){
  const two=eventId==='two';
  const matches=personalMatchSequence(eventId,row);
- // Reserve no more than two lines; keep circles large while they fit.
- const perLine=Math.ceil(matches.length/2);
- const dot=Math.max(2.8,Math.min(6,95/Math.max(1,perLine)-0.8));
+ // Exactly ten results per row. Never hide completed games (overall can span
+ // up to six rows when two adopted Days are combined).
+ const perRow=10;
+ const rowCount=Math.max(1,Math.ceil(matches.length/perRow));
+ const dot=rowCount<=2?6.3:rowCount===3?5.6:rowCount===4?4.9:rowCount===5?4.3:3.8;
  const dots=matches.map(m=>{
   const mine=m.a===row.id?m.sa:m.sb;
   const theirs=m.a===row.id?m.sb:m.sa;
   const status=mine>theirs?'win':mine<theirs?'lose':'draw';
   const score=two?'':Math.max(m.sa,m.sb);
   return `<span class="personal-dot is-${status}" title="${esc(`${status==='win'?'勝':status==='lose'?'負':'引分'} ${m.sa}-${m.sb}`)}" aria-label="${esc(`${status==='win'?'勝':status==='lose'?'負':'引分'}${two?'':` ${score}点`}`)}">${score||''}</span>`;
- }).join('');
- return `<div class="personal-results" style="--personal-dot-size:${dot.toFixed(2)}mm">${dots}</div>`;
+ });
+ const rows=[];
+ for(let i=0;i<dots.length;i+=perRow){
+  rows.push(`<div class="personal-result-row">${dots.slice(i,i+perRow).join('')}</div>`);
+ }
+ return `<div class="personal-results" style="--personal-dot-size:${dot.toFixed(2)}mm">${rows.join('')}</div>`;
 }
 function personalReportHTML(id){
  const rows=standings(ed(),id).slice().sort((a,b)=>a.id-b.id);

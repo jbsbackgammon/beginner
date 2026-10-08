@@ -119,7 +119,7 @@ export function createDemoEdition(random = Math.random) {
   }
   const demo = {
     id: DEMO_EDITION_ID,
-    name:'【テストデータ】 BACKGAMMON FESTIVAL 20XX',
+    name:'【テストデータ】 BACKGAMMON CLASSIC 2026',
     players,matches,pendingPairings:[],waitingPlayers,
     rosterVisibleRows:30,
     dates:Object.fromEntries(EVENTS.map(e=>[e.id,e.date])),

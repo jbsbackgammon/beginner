@@ -1,6 +1,6 @@
 import {EVENTS,eventById,validMatch,standings,entryCount} from './ranking.mjs';
 const KEY='jbs-beginner-v1';
-const eventIds=['day1','two','day2','cube','day3'];
+const eventIds=EVENTS.filter(e=>e.id!=='overall').map(e=>e.id);
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const initial=()=>({schema:1,activeEditionId:'classic-2026',editions:[{id:'classic-2026',name:'BACKGAMMON CLASSIC 2026',players:[],matches:[],dates:Object.fromEntries(EVENTS.map(e=>[e.id,e.date]))}]});

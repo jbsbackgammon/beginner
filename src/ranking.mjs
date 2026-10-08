@@ -1,9 +1,9 @@
 export const EVENTS = [
   { id: 'day1', label: '初級戦 Day1', short: 'Day1', date: '2026-10-10', kind: 'points' },
-  { id: 'two', label: '2ポイントマッチラウンドロビン', short: '2pt RR', date: '2026-10-10', kind: 'two' },
   { id: 'day2', label: '初級戦 Day2', short: 'Day2', date: '2026-10-11', kind: 'points' },
-  { id: 'cube', label: 'キューブ有ラウンドロビン', short: 'キューブ有RR', date: '2026-10-11', kind: 'cube' },
   { id: 'day3', label: '初級戦 Day3', short: 'Day3', date: '2026-10-12', kind: 'points' },
+  { id: 'two', label: '2ポイントマッチラウンドロビン', short: '2pt RR', date: '2026-10-10', kind: 'two' },
+  { id: 'cube', label: 'キューブ有ラウンドロビン', short: 'キューブ有RR', date: '2026-10-11', kind: 'cube' },
   { id: 'overall', label: '初級戦 総合', short: '総合', date: '2026-10-12', kind: 'overall' },
 ];
 export const eventById = (id) => EVENTS.find(e => e.id === id);

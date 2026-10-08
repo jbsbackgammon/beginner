@@ -3,10 +3,15 @@ const KEY='jbs-beginner-v1';
 const eventIds=EVENTS.filter(e=>e.id!=='overall').map(e=>e.id);
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const initial=()=>({schema:1,activeEditionId:'classic-2026',editions:[{id:'classic-2026',name:'BACKGAMMON CLASSIC 2026',players:[],matches:[],pendingPairings:[],dates:Object.fromEntries(EVENTS.map(e=>[e.id,e.date]))}]});
+const DEFAULT_EDITION_NAME='BACKGAMMON FESTIVAL 20XX';
+const initial=()=>({schema:1,activeEditionId:'classic-2026',editions:[{id:'classic-2026',name:DEFAULT_EDITION_NAME,players:[],matches:[],pendingPairings:[],dates:Object.fromEntries(EVENTS.map(e=>[e.id,e.date]))}]});
 let data;try{data=JSON.parse(localStorage.getItem(KEY)||'null')}catch{data=null}
 if(!data || data.schema!==1 || !Array.isArray(data.editions))data=initial();
-for(const edition of data.editions)ensureMatchNumbers(edition);
+for(const edition of data.editions){
+  ensureMatchNumbers(edition);
+  // Change only the prefilled starter label; never overwrite a customized name.
+  if(edition.id==='classic-2026' && edition.name==='BACKGAMMON CLASSIC 2026') edition.name=DEFAULT_EDITION_NAME;
+}
 // Backfill match numbers into older browser data without changing its storage key.
 try{localStorage.setItem(KEY,JSON.stringify(data))}catch{ /* Save errors are reported on edit. */ }
 let tab='players',activeEvent='day1',historySearch='',editingMatch=null,preselectedPair=null;

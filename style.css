@@ -626,3 +626,49 @@ html{scroll-padding-top:100px}
     padding-block:0;
   }
 }
+
+
+/* v24: keep a visible 1px rule directly beneath every table heading row. */
+@media screen {
+  .data-table thead th {
+    border-bottom:1px solid #cbd8d0;
+    box-shadow:inset 0 -1px 0 #cbd8d0;
+  }
+  .report table thead th {
+    border-bottom:1px solid #b4c5bd;
+    box-shadow:inset 0 -1px 0 #b4c5bd;
+  }
+
+  /* The numeric player field and adjacent player selector have identical height. */
+  .entry-form .match-player-controls .match-no-field input,
+  .entry-form .match-player-controls .match-name-field select {
+    height:36px;
+    min-height:36px;
+    box-sizing:border-box;
+    padding-top:0;
+    padding-bottom:0;
+  }
+  /* Older mobile rules set a 38px/42px flex basis on the number input;
+     since it is a column flex item, that otherwise overrides height. */
+  .entry-form .match-player-controls .match-no-field input {flex-basis:auto}
+
+  /* Center action cells; the pairing removal action is shown in red. */
+  .pairing-list thead th:last-child,
+  .pairing-list tbody td.pairing-actions,
+  .history-table tbody td.row-actions {text-align:center!important}
+  .pairing-list .pairing-actions .pairing-remove {color:#b43d3d;font-weight:700}
+
+  /* Equal-size opponent buttons: the previous intrinsic width of two digits. */
+  .opponents .opponent-no {
+    width:34px;min-width:34px;max-width:34px;flex:0 0 34px;
+    padding-left:2px;padding-right:2px;text-align:center;
+    font-variant-numeric:tabular-nums;
+  }
+}
+@media screen and (max-width:700px) {
+  .pairing-list tbody td.pairing-actions {
+    display:flex;align-items:center;justify-content:center;
+    padding-left:0!important;padding-right:0!important;text-align:center!important
+  }
+  .history-table tbody td.row-actions {justify-content:center!important}
+}

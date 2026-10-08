@@ -1019,3 +1019,232 @@ html{scroll-padding-top:100px}
   #print-area .personal-card:nth-child(odd) {border-left:0.25mm solid #999!important}
   #print-area .personal-card:nth-child(-n+2) {border-top:0.25mm solid #999!important}
 }
+
+/* v45: Desktop panels keep their controls visible while their data scrolls.
+   Desktop navigation and PDF printing are intentionally unaffected. */
+@media screen and (min-width:1101px) {
+  body:has(#app > .entry-grid),
+  body:has(#app > .roster-box),
+  body:has(#app > .report-settings) {
+    height:100vh;
+    height:100dvh;
+    min-height:0;
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+  }
+  body:has(#app > .entry-grid) > .topbar,
+  body:has(#app > .roster-box) > .topbar,
+  body:has(#app > .report-settings) > .topbar { flex:0 0 auto; }
+  body:has(#app > .entry-grid) > main,
+  body:has(#app > .roster-box) > main,
+  body:has(#app > .report-settings) > main {
+    flex:1 1 0;
+    min-height:0;
+    overflow:hidden;
+    padding-top:10px;
+    padding-bottom:10px;
+  }
+  #app:has(> .entry-grid),
+  #app:has(> .roster-box),
+  #app:has(> .report-settings) {
+    height:100%;
+    min-height:0;
+  }
+
+  /* Progress: the left form/pairing column stays independent of history. */
+  #app > .entry-grid {
+    height:100%;
+    min-height:0;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    align-items:stretch;
+  }
+  #app .entry-left {
+    min-height:0;
+    max-height:100%;
+    overflow-y:auto;
+    overflow-x:hidden;
+    overscroll-behavior-y:contain;
+    scrollbar-gutter:stable;
+  }
+  #app .entry-history {
+    height:100%;
+    min-height:0;
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+  }
+  #app .entry-history .history-title {
+    flex:0 0 auto;
+  }
+  #app .entry-history #history-results.history-scroll {
+    flex:1 1 auto;
+    height:auto;
+    min-height:0;
+    max-height:none;
+    overflow-y:auto!important;
+    overflow-x:hidden!important;
+    overscroll-behavior-y:contain;
+    scrollbar-gutter:stable;
+  }
+  #app .entry-history #history-results .history-table thead th {
+    position:sticky;
+    top:0;
+    z-index:5;
+    background:#edf3ef;
+    box-shadow:0 1px 0 #cbd8d0;
+  }
+
+  /* Player roster: scrolling belongs to the list, not the page. */
+  #app > .roster-box {
+    display:flex;
+    flex-direction:column;
+    min-height:0;
+    height:100%;
+    overflow:hidden;
+  }
+  #app .roster-scroll {
+    flex:1 1 auto;
+    height:auto;
+    min-height:0;
+    max-height:none;
+    overflow-y:auto!important;
+    overflow-x:hidden!important;
+    overscroll-behavior-y:contain;
+  }
+  #app .roster-scroll .roster-matrix thead th {
+    position:sticky;
+    top:0;
+    z-index:5;
+    background:#edf3ef;
+    box-shadow:0 1px 0 #cbd8d0;
+  }
+
+  /* Ranking: the PDF options stay visible and only the ranking list scrolls. */
+  #app:has(> .report-settings) {
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+  }
+  #app > .report-settings {flex:0 0 auto;min-height:0;}
+  #app > .report-rankings {
+    flex:1 1 auto;
+    min-height:0;
+    margin-top:0;
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+  }
+  #app > .report-rankings > .table-scroll {
+    flex:1 1 auto;
+    min-height:0;
+    height:auto;
+    max-height:none;
+    overflow-y:auto!important;
+    overflow-x:hidden!important;
+    overscroll-behavior-y:contain;
+    scrollbar-gutter:stable;
+  }
+  #app > .report-rankings > .table-scroll .standings-table thead th {
+    position:sticky;
+    top:0;
+    z-index:5;
+    background:#edf3ef;
+    box-shadow:0 1px 0 #cbd8d0;
+  }
+}
+
+/* PDF settings are more compact at every screen width. */
+@media screen {
+  #app > .report-settings {
+    padding-top:8px;
+    padding-bottom:8px;
+  }
+  #app > .report-settings .report-controls {row-gap:6px;}
+  #app > .report-settings .report-controls .field {gap:2px;}
+}
+
+/* v45: On tablets and phones, the player list and ranking cards still have
+   their own scroll area. The progression form stays vertically stacked so
+   controls remain usable on narrow screens. */
+@media screen and (max-width:1100px) {
+  body:has(#app > .roster-box),
+  body:has(#app > .report-settings) {
+    height:100vh;
+    height:100dvh;
+    min-height:0;
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+  }
+  body:has(#app > .roster-box) > .topbar,
+  body:has(#app > .report-settings) > .topbar {flex:0 0 auto;}
+  body:has(#app > .roster-box) > main,
+  body:has(#app > .report-settings) > main {
+    flex:1 1 0;
+    min-height:0;
+    overflow:hidden;
+    padding-top:10px;
+    padding-bottom:10px;
+  }
+  #app:has(> .roster-box),
+  #app:has(> .report-settings) {height:100%;min-height:0;}
+  #app > .roster-box {
+    display:flex;
+    flex-direction:column;
+    min-height:0;
+    height:100%;
+    overflow:hidden;
+  }
+  #app > .roster-box > .roster-scroll {
+    flex:1 1 auto;
+    min-height:0;
+    height:auto;
+    max-height:none;
+    overflow-y:auto!important;
+    overflow-x:hidden!important;
+    overscroll-behavior-y:contain;
+  }
+  #app:has(> .report-settings) {
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+  }
+  #app > .report-settings {flex:0 0 auto;min-height:0;}
+  #app > .report-rankings {
+    flex:1 1 auto;
+    min-height:0;
+    margin-top:0;
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+  }
+  #app > .report-rankings > .table-scroll {
+    flex:1 1 auto;
+    min-height:0;
+    height:auto;
+    max-height:none;
+    overflow-y:auto!important;
+    overflow-x:hidden!important;
+    overscroll-behavior-y:contain;
+  }
+}
+
+/* A stacked progression page must not grow thousands of pixels just because
+   there are many results. Keep the history itself scrollable on narrow views. */
+@media screen and (max-width:1100px) {
+  #app .entry-history #history-results.history-scroll {
+    max-height:clamp(240px,58dvh,640px);
+    min-height:0;
+    overflow-y:auto!important;
+    overflow-x:hidden!important;
+    overscroll-behavior-y:contain;
+  }
+  #app .entry-history #history-results .history-table thead th {
+    position:sticky;
+    top:0;
+    z-index:5;
+    background:#edf3ef;
+    box-shadow:0 1px 0 #cbd8d0;
+  }
+}

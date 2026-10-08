@@ -1,4 +1,4 @@
-import {EVENTS,eventById,validMatch,standings,entryCount,unplayedPairs,activePairings,reservePairing,cancelPairing,finishPairing,waitingPlayerIds,availableWaitingPlayers,addWaitingPlayer,removeWaitingPlayer,returnPlayersToWaiting,migrateReservedWaiting,canRegisterSelection,ensureMatchNumbers,nextMatchNumber,historySearchMatches,needsTournamentConfirmation,isEventEntrant,eligibleEventPlayers} from './ranking.mjs';
+import {EVENTS,eventById,validMatch,standings,entryCount,unplayedPairs,activePairings,reservePairing,cancelPairing,finishPairing,waitingPlayerIds,availableWaitingPlayers,addWaitingPlayer,removeWaitingPlayer,returnPlayersToWaiting,migrateReservedWaiting,canRegisterSelection,ensureMatchNumbers,nextMatchNumber,historySearchMatches,needsTournamentConfirmation,isEventEntrant,eligibleEventPlayers,createDemoEdition,DEMO_EDITION_ID} from './ranking.mjs';
 const KEY='jbs-beginner-v1';
 const eventIds=EVENTS.filter(e=>e.id!=='overall').map(e=>e.id);
 const $=id=>document.getElementById(id);
@@ -35,6 +35,13 @@ function renderHeaderEvent(){
  if(tab==='entry'&&activeEvent==='overall')activeEvent='day1';
  select.innerHTML=EVENTS.filter(e=>tab!=='entry'||e.id!=='overall').map(e=>`<option value="${e.id}">${esc(e.label)}</option>`).join('');
  select.value=activeEvent;
+ const demoButton=document.querySelector('[data-header-action="test"]');
+ if(demoButton){
+  const testing=data.activeEditionId===DEMO_EDITION_ID;
+  demoButton.textContent=testing?'テスト終了':'テスト';
+  demoButton.classList.toggle('is-testing',testing);
+  demoButton.setAttribute('aria-pressed',String(testing));
+ }
 }
 function render(){
  document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
@@ -307,6 +314,28 @@ function normalizeImport(x){if(!x||x.schema!==1||!Array.isArray(x.editions))thro
  }
  e.dates=e.dates||{};for(const p of e.players){p.entries=Array.isArray(p.entries)?p.entries.filter(v=>eventIds.includes(v)):[]}ensureMatchNumbers(e);migrateReservedWaiting(e)}return x}
 function fileLoad(){const i=document.createElement('input');i.type='file';i.accept='.json,application/json';i.onchange=async()=>{if(!i.files?.length)return;try{const raw=JSON.parse(await i.files[0].text());const imported=normalizeImport(raw);let n=0;for(const e of imported.editions){if(data.editions.some(x=>x.id===e.id)){if(!confirm(`「${e.name}」が存在します。上書きしますか？（操作を取り消せません）`))continue;data.editions=data.editions.filter(x=>x.id!==e.id)}data.editions.push(e);data.activeEditionId=e.id;n++}if(n){save();render();notice(`${n}大会分のデータを取り込みました。`)}else notice('取り込みは行われませんでした。');}catch(e){alert('JSON取込エラー：'+e.message)}};i.click();}
+function toggleTestData(){
+ if(data.activeEditionId===DEMO_EDITION_ID){
+  if(!confirm('テストを終了して、元の大会データに戻りますか？\nテスト中に入力した内容は削除されます。'))return;
+  const prior=data.demoReturnEditionId;
+  data.editions=data.editions.filter(e=>e.id!==DEMO_EDITION_ID);
+  data.activeEditionId=data.editions.some(e=>e.id===prior)?prior:data.editions[0]?.id;
+  delete data.demoReturnEditionId;
+  if(!data.activeEditionId){data=initial()}
+  tab='players';activeEvent='day1';historySearch='';editingMatch=null;preselectedPair=null;
+  save();render();notice('テストを終了し、元の大会データに戻りました。');
+  return;
+ }
+ if(!confirm('テスト専用データとして選手50名・試合結果200件をランダム生成します。\n既存の大会データは変更せず、テスト終了時に元のデータに戻ります。\n\nテストを開始しますか？'))return;
+ const prior=ed().id;
+ const demo=createDemoEdition();
+ data.editions=data.editions.filter(e=>e.id!==DEMO_EDITION_ID);
+ data.editions.push(demo);
+ data.demoReturnEditionId=prior;
+ data.activeEditionId=DEMO_EDITION_ID;
+ tab='players';activeEvent='day1';historySearch='';editingMatch=null;preselectedPair=null;
+ save();render();notice('テストデータ：選手50名・試合結果200件を生成しました。');
+}
 function newEdition(){const name=prompt('新しい大会データの名称','BACKGAMMON CLASSIC 2027');if(!name?.trim())return;const id='edition-'+Date.now();data.editions.push({id,name:name.trim(),players:[],matches:[],pendingPairings:[],dates:{}});data.activeEditionId=id;activeEvent='day1';$('header-event').value='day1';save();render();notice('大会データを作成しました。')}
 function onAction(action,id){switch(action){
  case 'add-roster-row':{
@@ -344,6 +373,7 @@ function onAction(action,id){switch(action){
  case 'delete-match':if(!confirm('この試合結果を削除しますか？'))return;ed().matches=ed().matches.filter(m=>String(m.id)!==String(id));if(editingMatch===id)editingMatch=null;save();render();notice('試合結果を削除しました。');break;
  case 'backup':download(`beginner_${timestamp()}.json`,JSON.stringify({schema:1,activeEditionId:data.activeEditionId,editions:data.editions},null,2),'application/json');break;
  case 'load':fileLoad();break;
+ case 'test':toggleTestData();break;
  case 'delete-all':{
   if(!confirm('【全削除】保存されているすべての大会データ・選手・試合結果・対戦斡旋を削除します。元に戻せません。必要な場合は、先にJSON出力でバックアップしてください。\n\n本当に全削除しますか？'))return;
   data=initial();tab='players';activeEvent='day1';historySearch='';editingMatch=null;preselectedPair=null;

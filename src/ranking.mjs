@@ -7,6 +7,70 @@ export const EVENTS = [
   { id: 'cube', label: 'キューブ有ラウンドロビン', short: 'キューブ有RR', date: '2026-10-11', kind: 'cube' },
   { id: 'school', label: '小学生選手権', short: '小学生選手権', date: '', kind: 'points' },
 ];
+export const DEMO_EDITION_ID = '__beginner_demo_v34__';
+
+/** Build temporary, random but rule-valid test records, never mutating live data.
+ * 50 players; exactly 200 results spread over all six individual events.
+ */
+export function createDemoEdition(random = Math.random) {
+  const events = EVENTS.filter(e => e.id !== 'overall');
+  const rand = () => {
+    const n = Number(random());
+    return Number.isFinite(n) ? Math.max(0, Math.min(0.999999999, n)) : 0.5;
+  };
+  const pick = items => items[Math.floor(rand() * items.length)];
+  const shuffle = items => {
+    for (let i = items.length - 1; i > 0; i--) {
+      const j = Math.floor(rand() * (i + 1));
+      [items[i], items[j]] = [items[j], items[i]];
+    }
+    return items;
+  };
+  const players = Array.from({length: 50}, (_, index) => {
+    const id = index + 1;
+    // A core group enters every event, other players illustrate mixed attendance.
+    const entries = events.filter(() => id <= 20 || rand() < 0.72).map(e => e.id);
+    if (!entries.length) entries.push(pick(events).id);
+    return {id, name:`テスト選手${String(id).padStart(2,'0')}`, kana:`てすとせんしゅ${String(id).padStart(2,'0')}`, entries};
+  });
+
+  const matches = [];
+  const waitingPlayers = {};
+  const distribution = {day1:35,day2:35,day3:35,two:35,cube:30,school:30};
+  for (const event of events) {
+    const entrants = players.filter(p => p.entries.includes(event.id)).map(p => p.id);
+    const pairs = [];
+    for (let i = 0; i < entrants.length; i++) {
+      for (let j = i + 1; j < entrants.length; j++) pairs.push([entrants[i], entrants[j]]);
+    }
+    shuffle(pairs);
+    const count = distribution[event.id];
+    if (pairs.length < count) throw Error('Not enough test pairings');
+    for (let i = 0; i < count; i++) {
+      const [a,b] = pairs[i];
+      let sa,sb;
+      if (event.kind === 'two') {
+        [sa,sb] = pick([[2,0],[2,1],[1,1],[1,2],[0,2]]);
+      } else {
+        const score = pick(event.kind === 'cube' ? [1,2,3,4,6,8,12] : [1,2,3]);
+        [sa,sb] = rand() < 0.5 ? [score,0] : [0,score];
+      }
+      matches.push({id:`demo-${event.id}-${String(i+1).padStart(3,'0')}`,event:event.id,a,b,sa,sb,matchNo:i+1});
+    }
+    const playedIds = [...new Set(matches.filter(m=>m.event===event.id).flatMap(m=>[m.a,m.b]))];
+    waitingPlayers[event.id] = shuffle(playedIds).slice(0,8).sort((a,b)=>a-b);
+  }
+  const demo = {
+    id: DEMO_EDITION_ID,
+    name:'【テストデータ】 BACKGAMMON FESTIVAL 20XX',
+    players,matches,pendingPairings:[],waitingPlayers,
+    rosterVisibleRows:50,
+    dates:Object.fromEntries(EVENTS.map(e=>[e.id,e.date])),
+    reservationWaitingVersion:1,
+  };
+  ensureMatchNumbers(demo);
+  return demo;
+}
 export const eventById = (id) => EVENTS.find(e => e.id === id);
 
 /** Result entry is permitted only for players explicitly registered for that event. */

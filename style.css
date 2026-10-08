@@ -286,6 +286,7 @@ html{scroll-padding-top:100px}
 .header-json{display:flex;align-items:center;gap:6px;flex-shrink:0}
 .header-json-button{display:inline-flex;align-items:center;justify-content:center;height:37px;padding:0 10px;border:1px solid #a5c8bb;border-radius:6px;background:#fff;color:#075b4a;font-size:15px;font-weight:700;white-space:nowrap;cursor:pointer}
 .header-json-button:hover{background:#eef9f2}
+.header-json-button.header-test.is-testing{background:#fff2ba;color:#664400;border-color:#efcc56}
 .header-json-button:focus-visible{outline:2px solid #fff;outline-offset:2px}
 @media(max-width:1080px){
   .header-controls{flex:0 1 auto;margin-left:auto}

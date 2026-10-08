@@ -32,7 +32,7 @@ function renderHeaderEvent(){
 function render(){
  document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
  renderHeaderEvent();
- $('app').innerHTML=({entry:renderEntry,players:renderPlayers,rank:renderRank,export:renderExport})[tab]();
+ $('app').innerHTML=({entry:renderEntry,players:renderPlayers,export:renderExport})[tab]();
  renderEditionPicker();
 }
 function dateFor(eventId){return ed().dates?.[eventId]||(ed().id==='classic-2026'?eventById(eventId)?.date:'')||''}
@@ -129,7 +129,6 @@ function statsTable(eventId,preview=false){
  });
  return `<div class="table-scroll"><table class="data-table standings-table"><thead><tr>${headers.map(x=>`<th>${x}</th>`).join('')}</tr></thead><tbody>${html.join('')}</tbody></table></div>`;
 }
-function renderRank(){return `<div class="box">${statsTable(activeEvent)}</div>`}
 function rosterNumbers(e){
  const highest=e.players.reduce((n,p)=>Number.isInteger(p.id)&&p.id>0?Math.max(n,p.id):n,0);
  const visible=Math.max(50,highest,Number.isInteger(e.rosterVisibleRows)?e.rosterVisibleRows:0);
@@ -204,13 +203,15 @@ function reportHTML(id){
  return `<div class="report"><div class="report-heading"><div class="smallcaps">JAPAN BACKGAMMON SOCIETY</div><h2>${esc(ed().name)}　${esc(e.label)}　成績表</h2><small>${esc(date)}　／　日本バックギャモン協会</small></div><table class="report-data-table"><thead><tr>${headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${tr||`<tr><td colspan="12">成績データなし</td></tr>`}</tbody></table><p class="muted" style="margin-top:12px">${rows.length}名　／　${isTwo?'勝越→勝率→試合数':'得失点差→勝越→勝率'}順</p></div>`;
 }
 function renderExport(){
- return `<div class="box report-settings">
-  <div class="edition-manage"><label class="field"><span>管理する大会データ</span><select id="edition-picker" aria-label="大会データ"></select></label><button type="button" class="btn" data-action="new-edition">大会を追加</button></div>
-  <div class="report-fields"><label class="field rank-event"><span>大会名</span><input id="edition-name-input" type="text" value="${esc(ed().name)}" maxlength="120"></label>
-   <label class="field"><span>${activeEvent==='overall'?'Day3開催日':'開催日'}</span><input id="edition-date-input" type="date" value="${esc(dateFor(activeEvent==='overall'?'day3':activeEvent))}"></label></div>
-  <div class="btnset"><button class="btn primary" data-action="print">PDF出力・印刷</button><button class="btn" data-action="csv">CSV出力</button></div>
- </div>${reportHTML(activeEvent)}`
+ // Combined screen: compact print controls above the live standings table.
+ const day=activeEvent==='overall'?'day3':activeEvent;
+ return `<section class="box report-settings"><div class="report-controls">
+  <label class="field report-name"><span>大会名</span><input id="edition-name-input" type="text" value="${esc(ed().name)}" maxlength="120"></label>
+  <label class="field report-date"><span>開催日</span><input id="edition-date-input" type="date" value="${esc(dateFor(day))}"></label>
+  <button type="button" class="btn primary report-print" data-action="print">PDF出力</button>
+ </div></section><section class="box report-rankings">${statsTable(activeEvent)}</section>`;
 }
+
 function matchSave(form){const f=new FormData(form),a=Number(f.get('a_no')||f.get('a')),b=Number(f.get('b_no')||f.get('b'));
  if(!a||!b||a===b){alert(a===b&&a>0?'同じ選手同士の結果は登録できません。':'左右に異なる選手を指定してください。');return}
  let sa,sb;
@@ -283,13 +284,11 @@ function onAction(action,id){switch(action){
  case 'edit-match':{const m=ed().matches.find(x=>String(x.id)===String(id));if(!m)return;activeEvent=m.event;$('header-event').value=m.event;editingMatch=m.id;preselectedPair=null;tab='entry';render();window.scrollTo({top:0,behavior:'smooth'});break}
  case 'cancel-match':editingMatch=null;preselectedPair=null;render();break;
  case 'delete-match':if(!confirm('この試合結果を削除しますか？'))return;ed().matches=ed().matches.filter(m=>String(m.id)!==String(id));if(editingMatch===id)editingMatch=null;save();render();notice('試合結果を削除しました。');break;
- case 'new-edition':newEdition();break;
  case 'backup':download(`beginner_${timestamp()}.json`,JSON.stringify({schema:1,activeEditionId:data.activeEditionId,editions:data.editions},null,2),'application/json');break;
  case 'load':fileLoad();break;
  case 'rename-edition':{const name=prompt('大会データの名称',ed().name);if(!name?.trim())return;ed().name=name.trim();save();render();break}
  case 'delete-edition':{if(data.editions.length===1){alert('最後の大会は削除できません。');return}if(!confirm(`「${ed().name}」の選手・試合データをすべて削除しますか？`))return;data.editions=data.editions.filter(e=>e.id!==data.activeEditionId);data.activeEditionId=data.editions[0].id;save();render();break}
  case 'print':$('print-area').innerHTML=reportHTML(activeEvent);window.print();break;
- case 'csv':download(`beginner_${activeEvent}_${timestamp()}.csv`,asCSV(activeEvent),'text/csv;charset=utf-8');break;
  }}
 document.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',()=>{tab=b.dataset.tab;editingMatch=null;render()}));
 document.querySelectorAll('[data-header-action]').forEach(b=>b.addEventListener('click',()=>onAction(b.dataset.headerAction)));

@@ -547,3 +547,82 @@ html{scroll-padding-top:100px}
     padding-left:8px!important;
   }
 }
+
+
+/* v23: three-page navigation, compact fixed header and consistent control sizing. */
+:root,body,button,input,select,textarea{
+  font-family:"Noto Sans JP","Hiragino Sans","Yu Gothic",sans-serif;
+}
+@media screen {
+  /* Buttons and all entry fields share the same 36px height. */
+  button,select,input,textarea,
+  input[type="text"],input[type="date"],input[type="number"],
+  .roster-matrix input[type="text"],
+  .header-event select,.header-json-button,.roster-matrix .roster-attendance{
+    height:36px;
+    min-height:36px;
+    box-sizing:border-box;
+    padding-top:0;
+    padding-bottom:0;
+    line-height:1.35;
+  }
+  input[type="checkbox"],input[type="radio"]{
+    height:auto;
+    min-height:0;
+  }
+  .top-inner{
+    min-height:46px;
+    padding-top:5px;
+    padding-bottom:5px;
+    gap:6px 12px;
+  }
+  .tabs{gap:12px}
+  .tabs button{
+    height:36px;
+    min-height:36px;
+    padding-top:0;
+    padding-bottom:0;
+  }
+  /* Outer perimeter of every visible grid matches the 1px inner rules. */
+  .data-table{border:1px solid #cbd8d0}
+  .report-data-table{border:1px solid #b4c5bd}
+  /* PDF settings and ranking stay in one tab, with a single row above the table. */
+  .report-controls{
+    display:grid;
+    grid-template-columns:minmax(0,2fr) minmax(165px,1fr) auto;
+    gap:12px;
+    align-items:end;
+  }
+  .report-controls .field{min-width:0;margin:0}
+  .report-controls .field input{width:100%;min-width:0}
+  .report-controls .report-print{min-width:100px;white-space:nowrap}
+  .report-rankings{margin-top:16px}
+}
+@media screen and (max-width:1080px){
+  .top-inner{padding:5px 0;gap:5px 10px}
+}
+@media screen and (max-width:700px){
+  .report-controls{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px}
+  .report-controls .report-name{grid-column:1/-1}
+  .report-controls .report-print{grid-column:2;justify-self:stretch;min-width:0}
+  .report-controls .report-date{grid-column:1}
+}
+@media screen and (max-width:390px){
+  .report-controls{grid-template-columns:minmax(0,1fr)}
+  .report-controls .report-name,.report-controls .report-date,.report-controls .report-print{grid-column:1}
+}
+/* v23: Override older component-level heights for every ordinary input. */
+@media screen {
+  #history-filter,
+  .history-title #history-filter,
+  .entry-form .match-player-controls .match-no-field input,
+  .entry-form .match-player-controls .match-name-field select,
+  .entry-form .result-row .result-score select,
+  #edition-name-input,
+  #edition-date-input,
+  .roster-matrix input[type="text"] {
+    height:36px;
+    min-height:36px;
+    padding-block:0;
+  }
+}

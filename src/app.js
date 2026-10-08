@@ -1,4 +1,4 @@
-import {EVENTS,eventById,validMatch,standings,entryCount,unplayedPairs,activePairings,reservePairing,cancelPairing,finishPairing,waitingPlayerIds,availableWaitingPlayers,addWaitingPlayer,removeWaitingPlayer,returnPlayersToWaiting,migrateReservedWaiting,canRegisterSelection,ensureMatchNumbers,nextMatchNumber} from './ranking.mjs';
+import {EVENTS,eventById,validMatch,standings,entryCount,unplayedPairs,activePairings,reservePairing,cancelPairing,finishPairing,waitingPlayerIds,availableWaitingPlayers,addWaitingPlayer,removeWaitingPlayer,returnPlayersToWaiting,migrateReservedWaiting,canRegisterSelection,ensureMatchNumbers,nextMatchNumber,historySearchMatches} from './ranking.mjs';
 const KEY='jbs-beginner-v1';
 const eventIds=EVENTS.filter(e=>e.id!=='overall').map(e=>e.id);
 const $=id=>document.getElementById(id);
@@ -45,7 +45,7 @@ function dateFor(eventId){return ed().dates?.[eventId]||(ed().id==='classic-2026
 function resultsFor(event){return ed().matches.filter(x=>x.event===event)}
 function side(m){return m.sa===m.sb?'引き分け':(m.sa>m.sb ? playerLabel(m.a):playerLabel(m.b))}
 function historyTable(matches) {
- const shown=matches.filter(m=>!historySearch||`${playerLabel(m.a)} ${playerLabel(m.b)}`.toLocaleLowerCase().includes(historySearch.toLocaleLowerCase())).slice().sort((a,b)=>b.matchNo-a.matchNo).slice(0,80);
+ const shown=matches.filter(m=>historySearchMatches(m,historySearch,ed().players)).slice().sort((a,b)=>b.matchNo-a.matchNo).slice(0,80);
  const rows=shown.map(m=>{
   // Keep the original result untouched for correction and ranking calculation.
   const draw=m.sa===m.sb;

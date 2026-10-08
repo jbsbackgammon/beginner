@@ -8,6 +8,24 @@ export const EVENTS = [
   { id: 'school', label: '小学生選手権', short: '小学生選手権', date: '', kind: 'points' },
 ];
 export const eventById = (id) => EVENTS.find(e => e.id === id);
+/** Result history matches player numbers, names, and readings only.
+ * A number-only query must match a complete player number (not score or match number).
+ */
+export function historySearchMatches(match, rawQuery, players) {
+  const query=String(rawQuery??'').trim().toLocaleLowerCase();
+  if(!query)return true;
+  const ids=[match.a,match.b];
+  if(/^#?\d+$/.test(query)) {
+    const number=Number(query.replace(/^#/,''));
+    return ids.includes(number);
+  }
+  return ids.some(id=>{
+    const player=(players||[]).find(p=>p.id===id);
+    return [`#${id} ${player?.name||''}`,player?.name||'',player?.kana||'']
+      .some(value=>String(value).toLocaleLowerCase().includes(query));
+  });
+}
+
 export const allowedCubePoints = [1,2,3,4,6,8,12];
 /** Only an explicit win/draw selection compatible with the score can be registered. */
 export function canRegisterSelection(kind, selection, score='') {

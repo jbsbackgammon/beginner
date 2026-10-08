@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {waitingPlayerIds,availableWaitingPlayers,addWaitingPlayer,removeWaitingPlayer,returnPlayersToWaiting,unplayedPairs,reservePairing,finishPairing,cancelPairing} from '../src/ranking.mjs';
+import {waitingPlayerIds,availableWaitingPlayers,addWaitingPlayer,removeWaitingPlayer,returnPlayersToWaiting,unplayedPairs,reservePairing,finishPairing,cancelPairing,migrateReservedWaiting} from '../src/ranking.mjs';
 const fixture=()=>({players:[1,2,3,4,5].map(id=>({id,name:`選手${id}`,entries:['day1','day2','cube']})),matches:[
  {id:'m12',event:'day1',a:1,b:2,sa:1,sb:0},
  {id:'m34',event:'day1',a:3,b:4,sa:2,sb:0},
@@ -18,7 +18,7 @@ test('legacy results still seed waiting list, but manual removal is persistent p
  assert.equal(removeWaitingPlayer(e,'day1',2),false);
  assert.deepEqual(waitingPlayerIds(JSON.parse(JSON.stringify(e)),'day1'),[1,3,4]);
 });
-test('only an entered, non-waiting, non-busy player can be added; invalid and duplicate additions fail',()=>{
+test('only an entered, non-waiting player can be added; reserved players reappear in the picker',()=>{
  const e=fixture();
  assert.equal(addWaitingPlayer(e,'day1',5),true);
  assert.deepEqual(waitingPlayerIds(e,'day1'),[1,2,3,4,5]);
@@ -27,8 +27,14 @@ test('only an entered, non-waiting, non-busy player can be added; invalid and du
  assert.equal(addWaitingPlayer(e,'overall',1),false);
  assert.deepEqual(unplayedPairs(e,'day1').filter(x=>x.a===5||x.b===5).map(x=>[x.a,x.b]),[[1,5],[2,5],[3,5],[4,5]]);
  assert.equal(reservePairing(e,'day1',1,5),true);
- assert.equal(addWaitingPlayer(e,'day1',1),false);
+ assert.deepEqual(waitingPlayerIds(e,'day1'),[2,3,4]);
+ assert.deepEqual(availableWaitingPlayers(e,'day1').map(p=>p.id),[1,5]);
+ assert.equal(unplayedPairs(e,'day1').some(p=>p.a===1||p.b===1||p.a===5||p.b===5),false);
+ assert.equal(addWaitingPlayer(e,'day1',1),true); // queue a reserved player without a second assignment
+ assert.deepEqual(availableWaitingPlayers(e,'day1').map(p=>p.id),[5]);
  assert.equal(cancelPairing(e,'day1',1,5),true);
+ assert.deepEqual(waitingPlayerIds(e,'day1'),[1,2,3,4,5]);
+ assert.deepEqual(availableWaitingPlayers(e,'day1'),[]);
  assert.ok(unplayedPairs(e,'day1').some(x=>x.a===1&&x.b===5));
 });
 test('completed results restore player availability after manual removal',()=>{
@@ -73,8 +79,27 @@ test('dropdown candidate list respects per-event attendance and current waiting,
  assert.deepEqual(availableWaitingPlayers(e,'day1').map(p=>p.id),[4,5]);
 });
 
-test('assigned player cannot be manually added even when excluded from explicit waiting state',()=>{
- const e={players:[1,2,3].map(id=>({id,name:'P'+id,entries:['day1']})),matches:[],pendingPairings:[{event:'day1',a:1,b:2}],waitingPlayers:{day1:[3]}};
- assert.deepEqual(availableWaitingPlayers(e,'day1'),[]);
- assert.equal(addWaitingPlayer(e,'day1',1),false);
+test('old pending data is migrated so assigned players return to the selection dropdown',()=>{
+ const e={players:[1,2,3].map(id=>({id,name:'P'+id,entries:['day1']})),matches:[],pendingPairings:[{event:'day1',a:1,b:2}],waitingPlayers:{day1:[1,2,3]}};
+ migrateReservedWaiting(e);
+ assert.deepEqual(waitingPlayerIds(e,'day1'),[3]);
+ assert.deepEqual(availableWaitingPlayers(e,'day1').map(p=>p.id),[1,2]);
+ assert.equal(addWaitingPlayer(e,'day1',1),true);
+ migrateReservedWaiting(e); // idempotent: do not erase a newly queued reserved player
+ assert.deepEqual(waitingPlayerIds(e,'day1'),[1,3]);
+ assert.deepEqual(availableWaitingPlayers(e,'day1').map(p=>p.id),[2]);
+ assert.deepEqual(unplayedPairs(e,'day1'),[]);
+ assert.equal(cancelPairing(e,'day1',1,2),true);
+ assert.deepEqual(waitingPlayerIds(e,'day1'),[1,2,3]);
+});
+
+test('legacy pending without an explicit waitlist retains only unassigned played players',()=>{
+ const e=fixture();e.pendingPairings=[{event:'day1',a:1,b:3}];
+ migrateReservedWaiting(e);
+ assert.deepEqual(waitingPlayerIds(e,'day1'),[2,4]);
+ assert.deepEqual(availableWaitingPlayers(e,'day1').map(p=>p.id),[1,3,5]);
+ assert.equal(reservePairing(e,'day1',2,4),true);
+ assert.deepEqual(waitingPlayerIds(e,'day1'),[]);
+ assert.deepEqual(availableWaitingPlayers(e,'day1').map(p=>p.id),[1,2,3,4,5]);
+ assert.deepEqual(unplayedPairs(e,'day1'),[]);
 });

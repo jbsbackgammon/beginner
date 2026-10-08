@@ -29,7 +29,7 @@ test('repeat results do not create duplicate matchmaking candidates', () => {
   assert.deepEqual(unplayedPairs(edition,'two').map(x=>[x.a,x.b]),[[1,3]]);
 });
 
-import {activePairings,reservePairing,cancelPairing,finishPairing} from '../src/ranking.mjs';
+import {activePairings,reservePairing,cancelPairing,finishPairing,returnPlayersToWaiting} from '../src/ranking.mjs';
 const matchupFixture=()=>({players:[1,2,3,4].map(id=>({id,name:`選手${id}`})),matches:[
  {id:'d1',event:'day1',a:1,b:2,sa:1,sb:0},
  {id:'d2',event:'day1',a:2,b:3,sa:1,sb:0},
@@ -60,10 +60,12 @@ test('saving a completed match releases its players without changing unrelated r
  reservePairing(ed,'day1',1,3);reservePairing(ed,'day1',2,4);
  ed.matches.push({id:'new',event:'day1',a:1,b:3,sa:3,sb:0});
  finishPairing(ed,'day1',1,3);
+ returnPlayersToWaiting(ed,'day1',1,3);
  assert.deepEqual(activePairings(ed,'day1'),[{event:'day1',a:2,b:4}]);
  assert.deepEqual(unplayedPairs(ed,'day1'),[]);
  assert.equal(ed.matches.length,5);
  finishPairing(ed,'day1',2,4);
+ returnPlayersToWaiting(ed,'day1',2,4);
  assert.deepEqual(unplayedPairs(ed,'day1').map(({a,b})=>[a,b]),[[1,4],[2,4]]);
 });
 test('legacy data with no pending list remains valid and can be booked',()=>{

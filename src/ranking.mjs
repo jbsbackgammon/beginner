@@ -137,17 +137,19 @@ function storeWaiting(edition, eventId, ids) {
   edition.waitingPlayers[eventId]=[...new Set(ids)].sort((a,b)=>a-b);
 }
 
-/** All participants entered in this event who are not already waiting or assigned. */
+/** All participants entered in this event who are not in the waiting list.
+ * A player with an assigned match is no longer waiting, so they may be shown
+ * in the picker (they remain unavailable for another pairing until finished).
+ */
 export function availableWaitingPlayers(edition, eventId) {
   if (!eventById(eventId) || eventId==='overall') return [];
   const waiting=new Set(waitingPlayerIds(edition,eventId));
-  const busy=new Set(activePairings(edition,eventId).flatMap(p=>[p.a,p.b]));
   return (edition.players||[])
-    .filter(p=>p.entries?.includes(eventId)&&!waiting.has(p.id)&&!busy.has(p.id))
+    .filter(p=>p.entries?.includes(eventId)&&!waiting.has(p.id))
     .sort((a,b)=>a.id-b.id);
 }
 
-/** Add only a registered participant who is neither waiting nor assigned. */
+/** Add a registered participant not currently in the waiting list. */
 export function addWaitingPlayer(edition, eventId, id) {
   if (!eventById(eventId) || eventId==='overall') return false;
   if (!availableWaitingPlayers(edition,eventId).some(p=>p.id===id)) return false;
@@ -176,10 +178,13 @@ export function activePairings(edition, eventId) {
   return (edition.pendingPairings || []).filter(p=>p.event===eventId);
 }
 
-/** Reserve both players until a result is entered (or the reservation is cancelled). */
+/** Reserve both players until a result is entered (or the reservation is cancelled).
+ * Move them out of the waiting list, so both appear in the add picker.
+ */
 export function reservePairing(edition, eventId, a, b) {
   if (!unplayedPairs(edition,eventId).some(p=>p.a===Math.min(a,b)&&p.b===Math.max(a,b))) return false;
   if (!Array.isArray(edition.pendingPairings)) edition.pendingPairings=[];
+  storeWaiting(edition,eventId,waitingPlayerIds(edition,eventId).filter(id=>id!==a&&id!==b));
   edition.pendingPairings.push({event:eventId,a:Math.min(a,b),b:Math.max(a,b)});
   return true;
 }
@@ -187,7 +192,23 @@ export function reservePairing(edition, eventId, a, b) {
 export function cancelPairing(edition, eventId, a, b) {
   const old=edition.pendingPairings||[];
   edition.pendingPairings=old.filter(p=>!(p.event===eventId && ((p.a===a&&p.b===b)||(p.a===b&&p.b===a))));
-  return old.length!==edition.pendingPairings.length;
+  if(old.length===edition.pendingPairings.length) return false;
+  storeWaiting(edition,eventId,[...waitingPlayerIds(edition,eventId),a,b]);
+  return true;
+}
+
+/** Upgrade older saved reservations, where assigned players were kept in the
+ * waiting list and only hidden by the UI. Run once for each edition.
+ */
+export function migrateReservedWaiting(edition) {
+  if (edition.reservationWaitingVersion===1) return edition;
+  for(const event of EVENTS.filter(e=>e.id!=='overall')) {
+    const busy=new Set(activePairings(edition,event.id).flatMap(p=>[p.a,p.b]));
+    if(!busy.size) continue;
+    storeWaiting(edition,event.id,waitingPlayerIds(edition,event.id).filter(id=>!busy.has(id)));
+  }
+  edition.reservationWaitingVersion=1;
+  return edition;
 }
 
 /** A registered result frees the match's participants from any reserved pairing. */

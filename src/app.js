@@ -1,4 +1,4 @@
-import {EVENTS,eventById,validMatch,standings,entryCount,unplayedPairs,activePairings,reservePairing,cancelPairing,finishPairing,waitingPlayerIds,availableWaitingPlayers,addWaitingPlayer,removeWaitingPlayer,returnPlayersToWaiting,canRegisterSelection,ensureMatchNumbers,nextMatchNumber} from './ranking.mjs';
+import {EVENTS,eventById,validMatch,standings,entryCount,unplayedPairs,activePairings,reservePairing,cancelPairing,finishPairing,waitingPlayerIds,availableWaitingPlayers,addWaitingPlayer,removeWaitingPlayer,returnPlayersToWaiting,migrateReservedWaiting,canRegisterSelection,ensureMatchNumbers,nextMatchNumber} from './ranking.mjs';
 const KEY='jbs-beginner-v1';
 const eventIds=EVENTS.filter(e=>e.id!=='overall').map(e=>e.id);
 const $=id=>document.getElementById(id);
@@ -9,6 +9,7 @@ let data;try{data=JSON.parse(localStorage.getItem(KEY)||'null')}catch{data=null}
 if(!data || data.schema!==1 || !Array.isArray(data.editions))data=initial();
 for(const edition of data.editions){
   ensureMatchNumbers(edition);
+  migrateReservedWaiting(edition);
   // Change only the prefilled starter label; never overwrite a customized name.
   if(edition.id==='classic-2026' && edition.name==='BACKGAMMON CLASSIC 2026') edition.name=DEFAULT_EDITION_NAME;
 }
@@ -260,7 +261,7 @@ function normalizeImport(x){if(!x||x.schema!==1||!Array.isArray(x.editions))thro
    if(!eventIds.includes(key)||!Array.isArray(list)||list.some(id=>!Number.isInteger(id)||!pids.has(id))||new Set(list).size!==list.length)throw Error('対戦待ちに無効な選手番号があります。');
   }
  }
- e.dates=e.dates||{};for(const p of e.players){p.entries=Array.isArray(p.entries)?p.entries.filter(v=>eventIds.includes(v)):[]}ensureMatchNumbers(e)}return x}
+ e.dates=e.dates||{};for(const p of e.players){p.entries=Array.isArray(p.entries)?p.entries.filter(v=>eventIds.includes(v)):[]}ensureMatchNumbers(e);migrateReservedWaiting(e)}return x}
 function fileLoad(){const i=document.createElement('input');i.type='file';i.accept='.json,application/json';i.onchange=async()=>{if(!i.files?.length)return;try{const raw=JSON.parse(await i.files[0].text());const imported=normalizeImport(raw);let n=0;for(const e of imported.editions){if(data.editions.some(x=>x.id===e.id)){if(!confirm(`「${e.name}」が存在します。上書きしますか？（操作を取り消せません）`))continue;data.editions=data.editions.filter(x=>x.id!==e.id)}data.editions.push(e);data.activeEditionId=e.id;n++}if(n){save();render();notice(`${n}大会分のデータを取り込みました。`)}else notice('取り込みは行われませんでした。');}catch(e){alert('JSON取込エラー：'+e.message)}};i.click();}
 function newEdition(){const name=prompt('新しい大会データの名称','BACKGAMMON CLASSIC 2027');if(!name?.trim())return;const id='edition-'+Date.now();data.editions.push({id,name:name.trim(),players:[],matches:[],pendingPairings:[],dates:{}});data.activeEditionId=id;activeEvent='day1';$('header-event').value='day1';save();render();notice('大会データを作成しました。')}
 function onAction(action,id){switch(action){

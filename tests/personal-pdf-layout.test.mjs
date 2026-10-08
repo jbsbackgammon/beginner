@@ -90,5 +90,14 @@ test('personal PDF count uses ranked players and centers the whole rank-and-coun
  assert.match(style,/#print-area \.personal-card \.personal-rank \{\s*display:flex!important;\s*justify-content:center!important;\s*align-items:flex-end!important;/);
  assert.match(style,/#print-area \.personal-card \.personal-rank-total \{[^}]*white-space:pre!important;/);
  assert.doesNotMatch(style,/#print-area \.personal-card \.personal-rank-total \{[^}]*position:absolute;/);
- assert.match(style,/#print-area \.personal-card \.personal-rank-total \{[^}]*font-size:11pt!important;/);
+ assert.match(style,/#print-area \.personal-card \.personal-rank-total \{[^}]*font-size:12pt!important;/);
+});
+
+test('personal PDF requested seven text groups are all 12pt',()=>{
+ for (const selector of ['personal-event-title','personal-event-detail','personal-footer','personal-rank-total']) {
+  const rules=[...style.matchAll(new RegExp(`#print-area \\.personal-card \\.${selector} \\{([^}]*)\\}`,'g'))];
+  assert.ok(rules.some(rule=>/font-size:\s*12pt\s*!important/.test(rule[1])),`${selector} must be 12pt in print`);
+ }
+ assert.match(style,/#print-area \.personal-card \.personal-summary,\s*#print-area \.personal-card \.personal-score-totals \{\s*font-size:12pt!important/);
+ assert.match(style,/#print-area \.personal-card \.personal-rank \{\s*font-size:28pt!important/);
 });

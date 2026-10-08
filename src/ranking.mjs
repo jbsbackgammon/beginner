@@ -10,7 +10,7 @@ export const EVENTS = [
 export const DEMO_EDITION_ID = '__beginner_demo_v34__';
 
 /** Build temporary, random but rule-valid test records, never mutating live data.
- * 50 players; exactly 200 results spread over all six individual events.
+ * 30 players and 300 unique pairings in each of the six individual events (1,800 results).
  */
 export function createDemoEdition(random = Math.random) {
   const events = EVENTS.filter(e => e.id !== 'overall');
@@ -27,7 +27,7 @@ export function createDemoEdition(random = Math.random) {
     return items;
   };
   // Independently shuffle matching kanji/reading pairs, so each run creates
-  // natural-looking, unique fictional names instead of テスト選手01...50.
+  // natural-looking, unique fictional names instead of テスト選手01...30.
   const surnames = shuffle([
     ['佐藤','さとう'], ['鈴木','すずき'], ['高橋','たかはし'], ['田中','たなか'],
     ['伊藤','いとう'], ['渡辺','わたなべ'], ['山本','やまもと'], ['中村','なかむら'],
@@ -58,19 +58,19 @@ export function createDemoEdition(random = Math.random) {
     ['悠人','ゆうと'], ['真央','まお'], ['大和','やまと'], ['優衣','ゆい'],
     ['翼','つばさ'], ['遥','はるか'],
   ]);
-  const players = Array.from({length: 50}, (_, index) => {
+  const players = Array.from({length: 30}, (_, index) => {
     const id = index + 1;
     const [surname, surnameKana] = surnames[index];
     const [givenName, givenKana] = givenNames[index];
-    // A core group enters every event, other players illustrate mixed attendance.
-    const entries = events.filter(() => id <= 20 || rand() < 0.72).map(e => e.id);
-    if (!entries.length) entries.push(pick(events).id);
+    // At least 25 entrants are needed for 300 distinct pairings; registering all
+    // 30 makes every generated match eligible and showcases complete standings.
+    const entries = events.map(e => e.id);
     return {id, name:`${surname} ${givenName}`, kana:`${surnameKana} ${givenKana}`, entries};
   });
 
   const matches = [];
   const waitingPlayers = {};
-  const distribution = {day1:35,day2:35,day3:35,two:35,cube:30,school:30};
+  const distribution = {day1:300,day2:300,day3:300,two:300,cube:300,school:300};
   for (const event of events) {
     const entrants = players.filter(p => p.entries.includes(event.id)).map(p => p.id);
     const pairs = [];
@@ -91,14 +91,22 @@ export function createDemoEdition(random = Math.random) {
       }
       matches.push({id:`demo-${event.id}-${String(i+1).padStart(3,'0')}`,event:event.id,a,b,sa,sb,matchNo:i+1});
     }
-    const playedIds = [...new Set(matches.filter(m=>m.event===event.id).flatMap(m=>[m.a,m.b]))];
-    waitingPlayers[event.id] = shuffle(playedIds).slice(0,8).sort((a,b)=>a-b);
+    // Guarantee that the sample waiting list includes an unplayed pairing,
+    // even with deterministic test RNGs or a dense 300/435 played schedule.
+    const remainingPair = pairs.slice(count)[0];
+    const playedIds = [...new Set(pairs.slice(0,count).flatMap(([a,b])=>[a,b]))];
+    const waiting = remainingPair ? [...remainingPair] : [];
+    for(const id of shuffle(playedIds)) {
+      if(waiting.length >= 8) break;
+      if(!waiting.includes(id)) waiting.push(id);
+    }
+    waitingPlayers[event.id] = waiting.sort((a,b)=>a-b);
   }
   const demo = {
     id: DEMO_EDITION_ID,
     name:'【テストデータ】 BACKGAMMON FESTIVAL 20XX',
     players,matches,pendingPairings:[],waitingPlayers,
-    rosterVisibleRows:50,
+    rosterVisibleRows:30,
     dates:Object.fromEntries(EVENTS.map(e=>[e.id,e.date])),
     reservationWaitingVersion:1,
   };

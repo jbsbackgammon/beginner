@@ -326,7 +326,7 @@ function toggleTestData(){
   save();render();notice('テストを終了し、元の大会データに戻りました。');
   return;
  }
- if(!confirm('テスト専用データとして選手50名・試合結果200件をランダム生成します。\n既存の大会データは変更せず、テスト終了時に元のデータに戻ります。\n\nテストを開始しますか？'))return;
+ if(!confirm('テスト専用データとして選手30名・各大会300件（全1,800件）の試合結果をランダム生成します。\n既存の大会データは変更せず、テスト終了時に元のデータに戻ります。\n\nテストを開始しますか？'))return;
  const prior=ed().id;
  const demo=createDemoEdition();
  data.editions=data.editions.filter(e=>e.id!==DEMO_EDITION_ID);
@@ -334,7 +334,7 @@ function toggleTestData(){
  data.demoReturnEditionId=prior;
  data.activeEditionId=DEMO_EDITION_ID;
  tab='players';activeEvent='day1';historySearch='';editingMatch=null;preselectedPair=null;
- save();render();notice('テストデータ：選手50名・試合結果200件を生成しました。');
+ save();render();notice('テストデータ：選手30名・各大会300件（全1,800件）の試合結果を生成しました。');
 }
 function newEdition(){const name=prompt('新しい大会データの名称','BACKGAMMON CLASSIC 2027');if(!name?.trim())return;const id='edition-'+Date.now();data.editions.push({id,name:name.trim(),players:[],matches:[],pendingPairings:[],dates:{}});data.activeEditionId=id;activeEvent='day1';$('header-event').value='day1';save();render();notice('大会データを作成しました。')}
 function onAction(action,id){switch(action){

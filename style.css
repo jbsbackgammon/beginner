@@ -116,6 +116,13 @@
 .history-table td{padding:10px 6px}
 .history-table .history-name{font-weight:600}
 .history-table .history-score{font-weight:700;white-space:nowrap}
+/* 進行管理：対戦斡旋・結果履歴の各データ値を太字で統一。
+   操作ボタンの表示・色や、他タブの表には影響させない。 */
+.pairing-list tbody td.pairing-name,
+.pairing-list tbody td.pairing-opponents,
+.history-table tbody td.history-number,
+.history-table tbody td.history-name,
+.history-table tbody td.history-score{font-weight:700}
 @media(max-width:1150px) and (min-width:851px){
  .entry-grid{grid-template-columns:minmax(355px,410px) minmax(0,1fr)}
  .entry-form{padding:14px}

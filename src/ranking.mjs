@@ -1,10 +1,10 @@
 export const EVENTS = [
-  { id: 'day1', label: '初級戦 Day1', short: 'Day1', date: '2026-10-10', kind: 'points' },
-  { id: 'day2', label: '初級戦 Day2', short: 'Day2', date: '2026-10-11', kind: 'points' },
-  { id: 'day3', label: '初級戦 Day3', short: 'Day3', date: '2026-10-12', kind: 'points' },
+  { id: 'overall', label: '初級戦総合', short: '総合', date: '2026-10-12', kind: 'overall' },
+  { id: 'day1', label: '初級戦Day1', short: 'Day1', date: '2026-10-10', kind: 'points' },
+  { id: 'day2', label: '初級戦Day2', short: 'Day2', date: '2026-10-11', kind: 'points' },
+  { id: 'day3', label: '初級戦Day3', short: 'Day3', date: '2026-10-12', kind: 'points' },
   { id: 'two', label: '2ポイントマッチラウンドロビン', short: '2pt RR', date: '2026-10-10', kind: 'two' },
   { id: 'cube', label: 'キューブ有ラウンドロビン', short: 'キューブ有RR', date: '2026-10-11', kind: 'cube' },
-  { id: 'overall', label: '初級戦 総合', short: '総合', date: '2026-10-12', kind: 'overall' },
 ];
 export const eventById = (id) => EVENTS.find(e => e.id === id);
 export const allowedCubePoints = [1,2,3,4,6,8,12];
@@ -72,3 +72,28 @@ export function overallStandings(edition) {
   return assignRanks(result,'points');
 }
 export function entryCount(edition,eventId){return (edition.matches||[]).filter(m=>m.event===eventId).length}
+
+/** List pairs of players who have both played in this event but have never met. */
+export function unplayedPairs(edition, eventId) {
+  if (!eventById(eventId) || eventId==='overall') return [];
+  const matches=(edition.matches||[]).filter(m=>m.event===eventId);
+  const players=new Map((edition.players||[]).map(p=>[p.id,p]));
+  const counts=new Map(),played=new Set();
+  const key=(a,b)=>`${Math.min(a,b)}:${Math.max(a,b)}`;
+  for (const m of matches) {
+    if (!players.has(m.a) || !players.has(m.b) || m.a===m.b) continue;
+    counts.set(m.a,(counts.get(m.a)||0)+1);
+    counts.set(m.b,(counts.get(m.b)||0)+1);
+    played.add(key(m.a,m.b));
+  }
+  const ids=[...counts.keys()].sort((a,b)=>a-b),pairs=[];
+  for (let i=0;i<ids.length;i++) for (let j=i+1;j<ids.length;j++) {
+    const a=ids[i],b=ids[j];
+    if (!played.has(key(a,b))) pairs.push({a,b,playedA:counts.get(a),playedB:counts.get(b)});
+  }
+  // Prioritize balanced, less-played opponents without changing the eligibility rule.
+  return pairs.sort((x,y)=>
+    (x.playedA+x.playedB)-(y.playedA+y.playedB) ||
+    Math.abs(x.playedA-x.playedB)-Math.abs(y.playedA-y.playedB) ||
+    x.a-y.a || x.b-y.b);
+}

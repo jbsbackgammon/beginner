@@ -34,3 +34,45 @@
 /* Highlight registered attendance in the player roster. */
 .roster-matrix td:has(> select[data-roster-event] option[value="attend"]:checked){background:#fffbea}
 .roster-matrix select[data-roster-event]:has(option[value="attend"]:checked){background:#fff5c7;border-color:#e4d28f;color:#514515}
+
+
+/* v9: page navigation at header left; tournament selector at header right. */
+.top-inner{justify-content:space-between}
+.tabs{justify-content:flex-start;flex:0 1 auto}
+.header-event{margin-left:auto;flex:0 0 auto;min-width:245px}
+.header-event select{width:100%;max-width:330px;background:white}
+.edition-manage{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap;margin-bottom:18px}
+.edition-manage .field{margin-bottom:0;min-width:240px;flex:0 1 380px}
+/* Entry: input form upper left, matching suggestions lower left, history at right. */
+.entry-grid{display:grid;grid-template-columns:minmax(360px,450px) minmax(0,1fr);gap:18px;align-items:start}
+.entry-left{display:flex;flex-direction:column;gap:18px;min-width:0}
+.entry-history{min-width:0}
+.entry-form h3{margin-bottom:20px}
+.entry-form .scoreline{grid-template-columns:minmax(0,1fr) 22px minmax(0,1fr);align-items:start}
+.entry-form .vs{padding-top:63px}
+.match-player{min-width:0}
+.player-field-label{font-size:12px;font-weight:700;color:#4a625b;margin-bottom:8px}
+.match-player-controls{display:flex;flex-direction:column;gap:4px}
+.match-player-controls .field{margin-bottom:3px}
+.match-player-controls .field span{font-size:11px}
+.match-player-controls input,.match-player-controls select{width:100%}
+.history-scroll{max-height:calc(100vh - 228px);min-height:320px;overflow:auto}
+.pairing-scroll{max-height:420px;overflow:auto}
+.pair-table th:first-child,.pair-table td:first-child,.history-table th:nth-child(2),.history-table td:nth-child(2){text-align:left}
+.pair-table th:nth-child(2),.pair-table td:nth-child(2){text-align:left}
+.entry-pairings .muted{line-height:1.6}
+@media(max-width:1080px){
+  .top-inner{padding:8px 0;gap:10px;flex-wrap:wrap}
+  .tabs{width:auto;flex:1 1 auto;overflow-x:auto;justify-content:flex-start}
+  .tabs button{padding:8px 4px 9px;flex:0 0 auto}
+  .header-event{width:auto;min-width:180px;max-width:260px;margin-left:auto}
+}
+@media(max-width:850px){
+  .entry-grid{grid-template-columns:1fr}
+  .history-scroll{max-height:500px}
+}
+@media(max-width:610px){
+  .tabs{order:1;width:100%;flex:1 0 100%}
+  .header-event{order:2;width:100%;max-width:none}
+  .header-event select{max-width:none}
+}

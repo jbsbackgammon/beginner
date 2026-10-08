@@ -6,10 +6,6 @@
 </head><body>
 <header class="topbar">
   <div class="wrap top-inner">
-    <div class="top-actions">
-      <select id="edition-picker" aria-label="大会データ"></select>
-      <button class="outline-on-dark" id="new-edition">大会を追加</button>
-    </div>
     <nav class="tabs" aria-label="管理画面">
       <button data-tab="players" class="active">選手管理</button>
       <button data-tab="entry">結果入力</button>
@@ -17,6 +13,9 @@
       <button data-tab="rank">ランキング表示</button>
       <button data-tab="export">成績表出力</button>
     </nav>
+    <div class="header-event">
+      <select id="header-event" aria-label="対象大会"></select>
+    </div>
   </div>
 </header>
 <main class="wrap"><div id="notice" role="status" aria-live="polite"></div><section id="app"></section></main>

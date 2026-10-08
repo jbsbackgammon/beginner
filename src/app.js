@@ -107,9 +107,9 @@ function pairingTable(pairs){
 function matchPlayerField(side,id,label,otherId){
  return `<div class="match-player"><div class="match-player-controls"><label class="field match-no-field"><input type="number" name="${side}_no" data-match-side="${side}" aria-label="${label}の番号" min="1" step="1" inputmode="numeric" value="${id||''}" placeholder="No."></label><label class="field match-name-field"><select name="${side}" data-match-side="${side}" aria-label="${label}の選手名">${playerOptions(id,otherId)}</select></label></div></div>`;
 }
-function outcomeButton(side,winningSide,pairReady){
+function outcomeButton(side,winningSide){
  const selected=winningSide===side,other=['a','b'].includes(winningSide)&&!selected;
- return `<button type="button" data-winner-button="${side}" class="winner-button ${selected?'win':other?'lose':''}" aria-pressed="${selected}" ${pairReady?'':'disabled'}>${other?'負':'勝'}</button>`;
+ return `<button type="button" data-winner-button="${side}" class="winner-button ${selected?'win':other?'lose':''}" aria-pressed="${selected}">${other?'負':'勝'}</button>`;
 }
 function renderEntry(){
  const e=eventById(activeEvent),matches=resultsFor(activeEvent),current=editingMatch?ed().matches.find(x=>x.id===editingMatch):null;
@@ -127,16 +127,17 @@ function renderEntry(){
  const drawButton=e.kind==='two'
    ? `<button type="button" class="draw-button ${winningSide==='draw'?'selected':''}" data-draw-button aria-pressed="${winningSide==='draw'}" ${pairReady?'':'disabled'}>引分</button>`
    : `<span aria-hidden="true"></span>`;
- const form=`<form id="match-form" data-kind="${e.kind}" data-winner="${winningSide}" data-player-pair="${first||''}:${second||''}"><div class="scoreline outcome-row ${e.kind==='two'?'two-entry':''}">${outcomeButton('a',winningSide,pairReady)}${drawButton}${outcomeButton('b',winningSide,pairReady)}</div><div class="scoreline ${e.kind==='two'?'two-entry':''}">${matchPlayerField('a',first,'左選手',second)}<span class="vs match-versus" aria-hidden="true">VS</span>${matchPlayerField('b',second,'右選手',first)}</div><div class="result-row">${resultControl}<div class="result-actions">${current?'<button type="button" class="btn" data-action="cancel-match">編集取消</button>':''}<button type="submit" class="btn primary" disabled>${current?'結果更新':'結果登録'}</button></div></div></form>`;
+ const form=`<form id="match-form" data-kind="${e.kind}" data-winner="${winningSide}" data-player-pair="${first||''}:${second||''}"><div class="scoreline outcome-row ${e.kind==='two'?'two-entry':''}">${outcomeButton('a',winningSide)}${drawButton}${outcomeButton('b',winningSide)}</div><div class="scoreline ${e.kind==='two'?'two-entry':''}">${matchPlayerField('a',first,'左選手',second)}<span class="vs match-versus" aria-hidden="true">VS</span>${matchPlayerField('b',second,'右選手',first)}</div><div class="result-row">${resultControl}<div class="result-actions">${current?'<button type="button" class="btn" data-action="cancel-match">編集取消</button>':''}<button type="submit" class="btn primary" disabled>${current?'結果更新':'結果登録'}</button></div></div></form>`;
  return `<div class="entry-grid"><div class="entry-left"><section class="box entry-form"><h3>結果入力</h3>${form}</section><section class="box entry-pairings"><div class="section-head pairing-title"><h3>対戦斡旋</h3>${addControl}</div><div id="pair-results" class="table-scroll spaced pairing-scroll">${pairingTable(pairs)}</div></section></div><section class="box entry-history"><div class="section-head history-title"><h3>結果履歴</h3><input id="history-filter" placeholder="選手名・番号で検索" value="${esc(historySearch)}" aria-label="結果履歴検索"></div><div id="history-results" class="table-scroll spaced history-scroll">${historyTable(matches)}</div></section></div>`;
 }
 function updateSubmitEnabled(form){
  if(!form)return;
- // Require two different registered players before outcome selection.
+ // Winner / loser are preselected and remain operable before player selection.
+ // Score and submission still require two different registered players.
  const left=String(form.elements.namedItem('a')?.value||'');
  const right=String(form.elements.namedItem('b')?.value||'');
  const pairReady=Boolean(left&&right&&left!==right&&isEventEntrant(ed(),activeEvent,Number(left))&&isEventEntrant(ed(),activeEvent,Number(right)));
- form.querySelectorAll('[data-winner-button], [data-draw-button]').forEach(button=>{
+ form.querySelectorAll('[data-draw-button]').forEach(button=>{
   button.disabled=!pairReady;
  });
  const outcomeSelected=pairReady&&['a','b','draw'].includes(form.dataset.winner)&&
@@ -149,8 +150,6 @@ function updateSubmitEnabled(form){
 }
 function setWinner(form,side){
  if(!form)return;
- const a=String(form.elements.namedItem('a')?.value||''),b=String(form.elements.namedItem('b')?.value||'');
- if(side&&(!a||!b||a===b||!isEventEntrant(ed(),activeEvent,Number(a))||!isEventEntrant(ed(),activeEvent,Number(b))))return;
  form.dataset.winner=side;
  form.querySelectorAll('[data-winner-button]').forEach(button=>{
   const state=!['a','b'].includes(side)?'':side===button.dataset.winnerButton?'win':'lose';

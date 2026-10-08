@@ -39,7 +39,9 @@ test('outcome buttons are above both player dropdowns and default to left WIN / 
  assert.match(top,/<button[^>]*data-winner-button="b"[^>]*class="winner-button lose"[^>]*aria-pressed="false"[^>]*>負<\/button>/);
  assert.ok(form.indexOf('data-winner-button="b"')<form.indexOf('name="a_no"'));
  assert.ok(form.indexOf('data-winner-button="b"')<form.indexOf('name="b_no"'));
- assert.ok(form.includes('disabled'),'outcome buttons are disabled until two valid participants are chosen');
+ assert.doesNotMatch(top, /<button[^>]*disabled/,'win and loss remain visibly selected without players');
+ assert.match(form, /name="points"[^>]*disabled/,'score selection still needs two players');
+ assert.match(form, /type="submit"[^>]*disabled/,'submission still needs two players');
 });
 
 test('2pt draw button stays between top-row win / loss controls',()=>{

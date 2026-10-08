@@ -1270,6 +1270,7 @@ html{scroll-padding-top:100px}
   #print-area .personal-card .personal-summary,
   #print-area .personal-card .personal-score-totals {
     font-size:9pt!important;
+    font-weight:400!important;
     line-height:1.45!important;
   }
   #print-area .personal-card .personal-results {
@@ -1286,10 +1287,14 @@ html{scroll-padding-top:100px}
     max-height:none!important;
     overflow:visible!important;
   }
+  /* Keep ten fixed slots per line so the first symbol is aligned on every row.
+     Even a partially filled last line starts at the left of the same grid. */
   #print-area .personal-card .personal-result-row {
-    display:flex!important;
+    display:grid!important;
+    grid-template-columns:repeat(10,var(--personal-dot-size))!important;
+    width:var(--personal-row-width)!important;
     flex:0 0 auto!important;
-    justify-content:center!important;
+    justify-content:start!important;
     align-items:center!important;
     gap:.8mm!important;
     min-height:var(--personal-dot-size);
@@ -1457,5 +1462,18 @@ html{scroll-padding-top:100px}
   #app .data-table thead th::before,
   #app .data-table thead th::after {
     content:none!important;
+  }
+}
+
+/* v50: print 2pt draws as △ rather than a double-ring circle. */
+@media print {
+  #print-area .personal-card .personal-dot.is-triangle {
+    border:0!important;
+    border-radius:0!important;
+    background:transparent!important;
+    color:#000!important;
+    font-size:calc(var(--personal-dot-size) * .98)!important;
+    line-height:1!important;
+    font-weight:700!important;
   }
 }

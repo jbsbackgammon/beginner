@@ -46,9 +46,10 @@ test('win/loss dots include match scores except 2-point match; draw is shown',()
  assert.match(dots,/aria-label="[勝負] (?:1|2|3)点"/);
  const two=standings(demo,'two')[0];
  const twoDots=fn.personalResultDots('two',two);
- assert.match(twoDots,/class="personal-dot is-(win|lose|draw)"/);
+ assert.match(twoDots,/class="personal-dot is-draw is-triangle"/);
+ assert.match(twoDots,/aria-label="引分">△<\/span>/);
  assert.doesNotMatch(twoDots,/点"/);
- assert.match(twoDots,/>\s*<\/span>/);
+ assert.doesNotMatch(twoDots,/class="personal-dot is-draw"[^>]*>\s*<\/span>/);
 });
 test('overall only prints adopted Day matches',()=>{
  const p=standings(demo,'overall')[0];
@@ -56,4 +57,20 @@ test('overall only prints adopted Day matches',()=>{
  const n=p.selectedDays.reduce((sum,day)=>sum+demo.matches.filter(m=>m.event===day&&(m.a===p.id||m.b===p.id)).length,0);
  assert.equal(history.length,n);
  assert.equal(history.length,p.matches);
+});
+
+test('personal PDF both numeric summary lines print with normal font weight',()=>{
+ const block=style.match(/#print-area \.personal-card \.personal-summary,\s*#print-area \.personal-card \.personal-score-totals \{([^}]*)\}/g);
+ assert.ok(block?.some(rule=>/font-weight:\s*400\s*!important/.test(rule)));
+});
+test('overall omits personal match symbols but keeps the two stats lines',()=>{
+ const html=fn.personalReportHTML('overall');
+ assert.match(html,/class="personal-summary"/);
+ assert.match(html,/class="personal-score-totals"/);
+ assert.doesNotMatch(html,/class="personal-dot/);
+});
+test('every personal match row uses the same ten-slot left-aligned grid',()=>{
+ assert.match(style,/grid-template-columns:repeat\(10,var\(--personal-dot-size\)\)!important/);
+ assert.match(style,/width:var\(--personal-row-width\)!important/);
+ assert.match(style,/justify-content:start!important/);
 });

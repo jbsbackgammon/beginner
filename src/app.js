@@ -303,10 +303,12 @@ function personalMatchSequence(eventId,row){
      ||(Number(a.matchNo)||0)-(Number(b.matchNo)||0));
 }
 function personalResultDots(eventId,row){
+ // Overall reports show summary statistics only. Retain an empty spacer so
+ // the date and organiser stay aligned with cards for the other events.
+ if(eventId==='overall')return '<div class="personal-results" aria-hidden="true"></div>';
  const two=eventId==='two';
  const matches=personalMatchSequence(eventId,row);
- // Exactly ten results per row. Never hide completed games (overall can span
- // up to six rows when two adopted Days are combined).
+ // Exactly ten results per row, with left-aligned partial final rows.
  const perRow=10;
  const rowCount=Math.max(1,Math.ceil(matches.length/perRow));
  const dot=rowCount<=2?6.3:rowCount===3?5.6:rowCount===4?4.9:rowCount===5?4.3:3.8;
@@ -315,13 +317,14 @@ function personalResultDots(eventId,row){
   const theirs=m.a===row.id?m.sb:m.sa;
   const status=mine>theirs?'win':mine<theirs?'lose':'draw';
   const score=two?'':Math.max(m.sa,m.sb);
-  return `<span class="personal-dot is-${status}" title="${esc(`${status==='win'?'勝':status==='lose'?'負':'引分'} ${m.sa}-${m.sb}`)}" aria-label="${esc(`${status==='win'?'勝':status==='lose'?'負':'引分'}${two?'':` ${score}点`}`)}">${score||''}</span>`;
+  const triangle=two&&status==='draw';
+  return `<span class="personal-dot is-${status}${triangle?' is-triangle':''}" title="${esc(`${status==='win'?'勝':status==='lose'?'負':'引分'} ${m.sa}-${m.sb}`)}" aria-label="${esc(`${status==='win'?'勝':status==='lose'?'負':'引分'}${two?'':` ${score}点`}`)}">${triangle?'△':score||''}</span>`;
  });
  const rows=[];
  for(let i=0;i<dots.length;i+=perRow){
   rows.push(`<div class="personal-result-row">${dots.slice(i,i+perRow).join('')}</div>`);
  }
- return `<div class="personal-results" style="--personal-dot-size:${dot.toFixed(2)}mm">${rows.join('')}</div>`;
+ return `<div class="personal-results" style="--personal-dot-size:${dot.toFixed(2)}mm;--personal-row-width:${(dot*perRow+(perRow-1)*0.8).toFixed(2)}mm">${rows.join('')}</div>`;
 }
 function personalReportHTML(id){
  const rows=standings(ed(),id).slice().sort((a,b)=>a.id-b.id);

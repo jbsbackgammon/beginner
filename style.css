@@ -447,3 +447,103 @@ html{scroll-padding-top:100px}
 /* v21: compact result action / compact inline history search. */
 .entry-form .result-row button[type=submit]{width:50%;justify-self:start}
 .history-title #history-filter{width:50%;max-width:50%;flex:0 1 50%}
+
+/* v22: Unified compact control height and tighter table rows (screen only). */
+@media screen {
+  /* The winner/loser buttons establish the shared control height. */
+  button,
+  select,
+  .btn,
+  .btn.small,
+  .tabs button,
+  .header-json-button,
+  .roster-matrix .roster-attendance,
+  .attendance-toggle,
+  .opponent-no,
+  .pairing-add .btn,
+  .two-controls .draw-button,
+  .entry-form .winner-button,
+  .entry-form .result-row button[type=submit] {
+    box-sizing:border-box;
+    height:36px;
+    min-height:36px;
+    padding-block:0;
+    line-height:1.35;
+  }
+  /* Keep number/name inputs on the same baseline as their paired selectors. */
+  .entry-form .match-player-controls .match-no-field input,
+  .entry-form .match-player-controls .match-name-field select,
+  .entry-form .result-row .result-score select,
+  .pairing-add select,
+  .header-event select {
+    height:36px;
+    min-height:36px;
+    padding-block:0;
+  }
+  .entry-form .match-versus,
+  .two-controls .versus-label {height:36px}
+  .entry-form .winner-button,
+  .two-controls .draw-button {margin-top:5px}
+  /* All heading/data table rows have 5px vertical inset, including action rows. */
+  .data-table th,
+  .data-table td,
+  .report table th,
+  .report table td {padding-top:5px;padding-bottom:5px}
+  .history-table th,.history-table td {padding-top:5px;padding-bottom:5px}
+  .pairing-list td {padding-top:5px;padding-bottom:5px}
+  .roster-matrix tfoot td{padding-top:5px;padding-bottom:5px}
+  .history-table .row-actions button{margin-top:0;margin-bottom:0}
+  /* Score stays in the left column; registration sits at the lower right. */
+  .entry-form .result-row button[type=submit]{
+    grid-column:2;
+    justify-self:end;
+    width:50%;
+    align-self:end;
+  }
+}
+@media screen and (max-width:1100px){
+  .roster-matrix tbody tr,
+  .standings-table tbody tr,
+  .report-data-table tbody tr{padding-top:5px;padding-bottom:5px}
+}
+@media screen and (max-width:700px){
+  .history-table tbody tr,
+  .pairing-list tbody tr {padding-top:5px;padding-bottom:5px}
+}
+
+/* v22: add vertical rules to every tabular view, matching the 1px horizontal rules. */
+@media screen {
+  .data-table thead th,
+  .data-table tfoot td {
+    border-left:1px solid #cbd8d0;
+    border-right:1px solid #cbd8d0;
+  }
+  .data-table tbody td {
+    border-left:1px solid #ebefec;
+    border-right:1px solid #ebefec;
+  }
+  /* Printed/displayed report tables already use a 1px four-sided grid. */
+}
+/* Below tablet width, tables become two-column cards. Preserve 1px dividers
+   between the visual columns without reintroducing horizontal scrolling. */
+@media screen and (max-width:1100px) {
+  .roster-matrix tbody td:nth-child(2n+3),
+  .standings-table tbody td:nth-child(2n+3),
+  .report-data-table tbody td:nth-child(2n+3) {
+    border-left:1px solid #ebefec!important;
+    padding-left:10px!important;
+  }
+  .roster-matrix tbody td:first-child,
+  .standings-table tbody td:first-child,
+  .report-data-table tbody td:first-child {
+    border-left:0!important;
+  }
+}
+@media screen and (max-width:700px) {
+  .history-table tbody td:nth-child(3),
+  .history-table tbody td:nth-child(4),
+  .pairing-list tbody td:nth-child(3) {
+    border-left:1px solid #ebefec!important;
+    padding-left:8px!important;
+  }
+}

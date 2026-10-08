@@ -201,7 +201,11 @@ function statsTable(eventId,preview=false){
   ];
   return `<tr class="${r.rank<=3?'podium':''}">${cells.join('')}</tr>`;
  });
- return `<div class="table-scroll"><table class="data-table standings-table"><thead><tr>${headers.map(x=>`<th>${x}</th>`).join('')}</tr></thead><tbody>${html.join('')}</tbody></table></div>`;
+ // All columns after "順位" share one width. "順位" is exactly half
+ // of that width, regardless of the event's differing column count.
+ const unitWidth=100/(headers.length-0.5);
+ const colWidths=`<colgroup><col style="width:${(unitWidth/2).toFixed(5)}%">${headers.slice(1).map(()=>`<col style="width:${unitWidth.toFixed(5)}%">`).join('')}</colgroup>`;
+ return `<div class="table-scroll"><table class="data-table standings-table">${colWidths}<thead><tr>${headers.map(x=>`<th>${x}</th>`).join('')}</tr></thead><tbody>${html.join('')}</tbody></table></div>`;
 }
 function rosterNumbers(e){
  const highest=e.players.reduce((n,p)=>Number.isInteger(p.id)&&p.id>0?Math.max(n,p.id):n,0);

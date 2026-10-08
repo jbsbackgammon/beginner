@@ -10,7 +10,8 @@ export const EVENTS = [
 export const DEMO_EDITION_ID = '__beginner_demo_v34__';
 
 /** Build temporary, random but rule-valid test records, never mutating live data.
- * 30 players and 300 unique pairings in each of the six individual events (1,800 results).
+ * 30 players, randomized attendance (26-29 per event), and 300 unique pairings
+ * in each of the six individual events (1,800 results).
  */
 export function createDemoEdition(random = Math.random) {
   const events = EVENTS.filter(e => e.id !== 'overall');
@@ -62,17 +63,31 @@ export function createDemoEdition(random = Math.random) {
     const id = index + 1;
     const [surname, surnameKana] = surnames[index];
     const [givenName, givenKana] = givenNames[index];
-    // At least 25 entrants are needed for 300 distinct pairings; registering all
-    // 30 makes every generated match eligible and showcases complete standings.
-    const entries = events.map(e => e.id);
-    return {id, name:`${surname} ${givenName}`, kana:`${surnameKana} ${givenKana}`, entries};
+    return {id, name:`${surname} ${givenName}`, kana:`${surnameKana} ${givenKana}`, entries:[]};
+  });
+
+  // 26 entrants still provide 325 distinct pairs, enough for 300 games and a
+  // useful "unplayed" list. Every event has one to four non-entrants.
+  // Rotate the shuffled pool per event so even a deterministic test random
+  // function produces different attendance for Day1 / Day2 / ... .
+  const eventEntrants = {};
+  events.forEach((event, index) => {
+    const count = 26 + Math.floor(rand() * 4);
+    const pool = shuffle(players.map(player => player.id));
+    const offset = (index * 5) % pool.length;
+    const rotated = pool.slice(offset).concat(pool.slice(0, offset));
+    const selected = new Set(rotated.slice(0, count));
+    eventEntrants[event.id] = selected;
+    players.forEach(player => {
+      if (selected.has(player.id)) player.entries.push(event.id);
+    });
   });
 
   const matches = [];
   const waitingPlayers = {};
   const distribution = {day1:300,day2:300,day3:300,two:300,cube:300,school:300};
   for (const event of events) {
-    const entrants = players.filter(p => p.entries.includes(event.id)).map(p => p.id);
+    const entrants = [...eventEntrants[event.id]].sort((a,b) => a-b);
     const pairs = [];
     for (let i = 0; i < entrants.length; i++) {
       for (let j = i + 1; j < entrants.length; j++) pairs.push([entrants[i], entrants[j]]);

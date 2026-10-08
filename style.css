@@ -20,3 +20,7 @@
 .roster-matrix input:disabled,.roster-matrix select:disabled{background:#edf0ee;color:#a0ada6;border-color:#e3e9e5;opacity:.7;cursor:not-allowed}
 .roster-matrix tr.roster-inactive [data-roster-name]{background:#fff}
 @media(max-width:850px){.roster-box{padding:8px}.roster-scroll{max-height:calc(100vh - 170px)}}
+
+/* Highlight registered attendance in the player roster. */
+.roster-matrix td:has(> select[data-roster-event] option[value="attend"]:checked){background:#fffbea}
+.roster-matrix select[data-roster-event]:has(option[value="attend"]:checked){background:#fff5c7;border-color:#e4d28f;color:#514515}

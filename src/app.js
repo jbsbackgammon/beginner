@@ -1,4 +1,4 @@
-import {EVENTS,eventById,validMatch,standings,entryCount,unplayedPairs,activePairings,reservePairing,cancelPairing,finishPairing} from './ranking.mjs';
+import {EVENTS,eventById,validMatch,standings,entryCount,unplayedPairs,activePairings,reservePairing,cancelPairing,finishPairing,waitingPlayerIds,addWaitingPlayer,removeWaitingPlayer,returnPlayersToWaiting} from './ranking.mjs';
 const KEY='jbs-beginner-v1';
 const eventIds=EVENTS.filter(e=>e.id!=='overall').map(e=>e.id);
 const $=id=>document.getElementById(id);
@@ -51,14 +51,13 @@ function historyTable(matches) {
 }
 
 function pairingTable(pairs){
- const completed=resultsFor(activeEvent),busy=activePairings(ed(),activeEvent);
- const seen=new Set(),groups=new Map();
- for(const m of completed){seen.add(m.a);seen.add(m.b)}
+ const busy=activePairings(ed(),activeEvent);
+ const groups=new Map();
  const busyIds=new Set(busy.flatMap(p=>[p.a,p.b]));
- for(const id of [...seen].filter(id=>!busyIds.has(id)).sort((a,b)=>a-b))groups.set(id,[]);
+ for(const id of waitingPlayerIds(ed(),activeEvent).filter(id=>!busyIds.has(id)))groups.set(id,[]);
  for(const pair of pairs){groups.get(pair.a)?.push(pair.b);groups.get(pair.b)?.push(pair.a)}
  const filtered=[...groups];
- const list=filtered.length?`<table class="data-table pairing-list"><thead><tr><th>対戦待ち</th><th>未対戦</th></tr></thead><tbody>${filtered.map(([id,opps])=>`<tr><td class="pairing-name">${esc(playerLabel(id))}</td><td><div class="opponents">${opps.length?opps.sort((a,b)=>a-b).map(n=>`<button type="button" class="opponent-no" data-action="pick-pair" data-a="${id}" data-b="${n}" title="${esc(player(n)?.name||playerLabel(n))}" aria-label="${esc(playerLabel(n))}と対戦を組む">${n}</button>`).join(''):'<span class="muted">ー</span>'}</div></td></tr>`).join('')}</tbody></table>`:`<div class="empty">${seen.size?'斡旋できる選手がいません':'結果が登録された選手はいません'}</div>`;
+ const list=filtered.length?`<table class="data-table pairing-list"><thead><tr><th>対戦待ち</th><th>未対戦</th></tr></thead><tbody>${filtered.map(([id,opps])=>`<tr><td class="pairing-name"><div class="pairing-waiter"><span>${esc(playerLabel(id))}</span><button type="button" class="btn small pairing-remove" data-action="remove-waiting" data-id="${id}" aria-label="${esc(playerLabel(id))}を対戦待ちから削除">削除</button></div></td><td><div class="opponents">${opps.length?opps.sort((a,b)=>a-b).map(n=>`<button type="button" class="opponent-no" data-action="pick-pair" data-a="${id}" data-b="${n}" title="${esc(player(n)?.name||playerLabel(n))}" aria-label="${esc(playerLabel(n))}と対戦を組む">${n}</button>`).join(''):'<span class="muted">ー</span>'}</div></td></tr>`).join('')}</tbody></table>`:`<div class="empty">${busy.length?'対戦待ちの選手がいません':'対戦待ちの選手がいません'}</div>`;
  return list;
 }
 function matchPlayerField(side,id,label,winningSide){
@@ -74,9 +73,13 @@ function renderEntry(){
  const pts=e.kind==='cube'?[1,2,3,4,6,8,12]:[1,2,3];
  const pointsLabel=e.kind==='points'?{1:'1-0 シングル勝ち',2:'2-0 ギャモン勝ち',3:'3-0 バックギャモン勝ち'}:Object.fromEntries(pts.map(n=>[n,`${n}-0`]));
  const resultControl=e.kind==='two'?`<label class="field result-score"><span>得点</span><select name="result" required><option value="">結果を選択</option>${['2-0','2-1','1-1','1-2','0-2'].map(x=>`<option value="${x}" ${twoScore===x?'selected':''}>${x}</option>`).join('')}</select></label>`:`<label class="field result-score"><span>得点</span><select name="points">${pts.map(n=>`<option value="${n}" ${current&&Math.max(current.sa,current.sb)===n?'selected':''}>${pointsLabel[n]}</option>`).join('')}</select></label>`;
+ const waiting=new Set(waitingPlayerIds(ed(),activeEvent));
+ const busy=new Set(activePairings(ed(),activeEvent).flatMap(p=>[p.a,p.b]));
+ const addable=[...ed().players].filter(p=>!waiting.has(p.id)&&!busy.has(p.id)).sort((a,b)=>a.id-b.id);
+ const addControl=`<div class="pairing-add"><select id="pair-add-player" aria-label="対戦待ちに追加する選手番号" ${addable.length?'':'disabled'}><option value="">番号を選択</option>${addable.map(p=>`<option value="${p.id}">${esc(`#${p.id} ${p.name}`)}</option>`).join('')}</select><button type="button" class="btn small" data-action="add-waiting" ${addable.length?'':'disabled'}>追加</button></div>`;
  const pairs=unplayedPairs(ed(),activeEvent);
  const form=`<form id="match-form" data-winner="${winningSide}"><div class="scoreline">${matchPlayerField('a',first,'左選手',winningSide)}<span class="vs match-versus" aria-hidden="true">VS</span>${matchPlayerField('b',second,'右選手',winningSide)}</div><div class="result-row">${resultControl}<button type="submit" class="btn primary">${current?'結果を更新':'結果を登録'}</button></div>${current?'<div class="btnset"><button type="button" class="btn" data-action="cancel-match">編集を取り消す</button></div>':''}</form>`;
- return `<div class="entry-grid"><div class="entry-left"><section class="box entry-form"><h3>結果入力</h3>${form}</section><section class="box entry-pairings"><div class="section-head"><h3>対戦斡旋</h3></div><div id="pair-results" class="table-scroll spaced pairing-scroll">${pairingTable(pairs)}</div></section></div><section class="box entry-history"><div class="section-head"><h3>結果履歴</h3></div><input id="history-filter" placeholder="選手名・番号で検索" value="${esc(historySearch)}" class="select-wide" aria-label="結果履歴検索"><div id="history-results" class="table-scroll spaced history-scroll">${historyTable(matches)}</div></section></div>`;
+ return `<div class="entry-grid"><div class="entry-left"><section class="box entry-form"><h3>結果入力</h3>${form}</section><section class="box entry-pairings"><div class="section-head pairing-title"><h3>対戦斡旋</h3>${addControl}</div><div id="pair-results" class="table-scroll spaced pairing-scroll">${pairingTable(pairs)}</div></section></div><section class="box entry-history"><div class="section-head"><h3>結果履歴</h3></div><input id="history-filter" placeholder="選手名・番号で検索" value="${esc(historySearch)}" class="select-wide" aria-label="結果履歴検索"><div id="history-results" class="table-scroll spaced history-scroll">${historyTable(matches)}</div></section></div>`;
 }
 function setWinner(form,side){
  form.dataset.winner=side;
@@ -152,7 +155,12 @@ function rosterNameChange(input){
    alert('この選手には試合記録または対戦中の割当があります。名前を空欄にはできません。');
    input.value=p.name;rosterRowState(tr);return;
   }
-  if(p)ed().players=ed().players.filter(x=>x.id!==id);
+  if(p){
+   ed().players=ed().players.filter(x=>x.id!==id);
+   for(const ids of Object.values(ed().waitingPlayers||{}))if(Array.isArray(ids)){
+    const index=ids.indexOf(id);if(index!==-1)ids.splice(index,1);
+   }
+  }
   tr.querySelector('[data-roster-kana]').value='';
   tr.querySelectorAll('[data-roster-event]').forEach(button=>{button.setAttribute('aria-pressed','false');button.classList.remove('attending');button.textContent='ー';button.setAttribute('aria-label',button.getAttribute('aria-label').replace(/ (出場|未出場)$/,' 未出場'));});
  }else if(p){p.name=name;}else{
@@ -202,6 +210,7 @@ function matchSave(form){const f=new FormData(form),a=Number(f.get('a_no')||f.ge
  if(repeated&&!confirm('この2名は既にこの大会で対戦しています。重複対戦として登録しますか？'))return;
  if(editingMatch){const i=ed().matches.findIndex(x=>x.id===editingMatch);if(i<0)return;ed().matches[i]=m;}else ed().matches.push(m);
  finishPairing(ed(),activeEvent,a,b);
+ returnPlayersToWaiting(ed(),activeEvent,a,b);
  editingMatch=null;preselectedPair=null;save();render();notice('試合結果を保存しました。');
 }
 
@@ -227,10 +236,29 @@ function normalizeImport(x){if(!x||x.schema!==1||!Array.isArray(x.editions))thro
   if(used.has(q.a)||used.has(q.b))throw Error('同じ選手の対戦中割当が重複しています。');
   used.add(q.a);used.add(q.b);busyByEvent.set(q.event,used);
  }
+ if(e.waitingPlayers!==undefined){
+  if(!e.waitingPlayers||typeof e.waitingPlayers!=='object'||Array.isArray(e.waitingPlayers))throw Error('対戦待ちデータが不正です。');
+  for(const [key,list] of Object.entries(e.waitingPlayers)){
+   if(!eventIds.includes(key)||!Array.isArray(list)||list.some(id=>!Number.isInteger(id)||!pids.has(id))||new Set(list).size!==list.length)throw Error('対戦待ちに無効な選手番号があります。');
+  }
+ }
  e.dates=e.dates||{};for(const p of e.players){p.entries=Array.isArray(p.entries)?p.entries.filter(v=>eventIds.includes(v)):[]}}return x}
 function fileLoad(){const i=document.createElement('input');i.type='file';i.accept='.json,application/json';i.onchange=async()=>{if(!i.files?.length)return;try{const raw=JSON.parse(await i.files[0].text());const imported=normalizeImport(raw);let n=0;for(const e of imported.editions){if(data.editions.some(x=>x.id===e.id)){if(!confirm(`「${e.name}」が存在します。上書きしますか？（操作を取り消せません）`))continue;data.editions=data.editions.filter(x=>x.id!==e.id)}data.editions.push(e);data.activeEditionId=e.id;n++}if(n){save();render();notice(`${n}大会分のデータを取り込みました。`)}else notice('取り込みは行われませんでした。');}catch(e){alert('JSON取込エラー：'+e.message)}};i.click();}
 function newEdition(){const name=prompt('新しい大会データの名称','BACKGAMMON CLASSIC 2027');if(!name?.trim())return;const id='edition-'+Date.now();data.editions.push({id,name:name.trim(),players:[],matches:[],pendingPairings:[],dates:{}});data.activeEditionId=id;activeEvent='day1';$('header-event').value='day1';save();render();notice('大会データを作成しました。')}
 function onAction(action,id){switch(action){
+ case 'add-waiting':{
+  const id=Number($('pair-add-player')?.value);
+  if(!id){notice('追加する選手番号を選んでください。');return}
+  if(!addWaitingPlayer(ed(),activeEvent,id)){notice('この選手は対戦待ちに追加できません。');return}
+  save();render();notice(`${playerLabel(id)} を対戦待ちに追加しました。`);break
+ }
+ case 'remove-waiting':{
+  const playerId=Number(id);
+  if(removeWaitingPlayer(ed(),activeEvent,playerId)){
+   save();render();notice(`${playerLabel(playerId)} を対戦待ちから削除しました。`);
+  }
+  break
+ }
  case 'edit-match':{const m=ed().matches.find(x=>String(x.id)===String(id));if(!m)return;activeEvent=m.event;$('header-event').value=m.event;editingMatch=m.id;preselectedPair=null;tab='entry';render();window.scrollTo({top:0,behavior:'smooth'});break}
  case 'cancel-match':editingMatch=null;preselectedPair=null;render();break;
  case 'delete-match':if(!confirm('この試合結果を削除しますか？'))return;ed().matches=ed().matches.filter(m=>String(m.id)!==String(id));if(editingMatch===id)editingMatch=null;save();render();notice('試合結果を削除しました。');break;

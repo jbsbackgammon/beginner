@@ -73,6 +73,50 @@ export function overallStandings(edition) {
 }
 export function entryCount(edition,eventId){return (edition.matches||[]).filter(m=>m.event===eventId).length}
 
+
+/** Players explicitly waiting for a match, per event.
+ * Legacy editions without a saved list use players who have completed a game.
+ * Once a list is edited, it becomes explicit so manual removal persists.
+ */
+export function waitingPlayerIds(edition, eventId) {
+  if (!eventById(eventId) || eventId === 'overall') return [];
+  const valid=new Set((edition.players||[]).map(p=>p.id));
+  const stored=edition.waitingPlayers?.[eventId];
+  const ids=Array.isArray(stored) ? stored : (edition.matches||[])
+    .filter(m=>m.event===eventId).flatMap(m=>[m.a,m.b]);
+  return [...new Set(ids.filter(id=>valid.has(id)))].sort((a,b)=>a-b);
+}
+
+function storeWaiting(edition, eventId, ids) {
+  edition.waitingPlayers ||= {};
+  edition.waitingPlayers[eventId]=[...new Set(ids)].sort((a,b)=>a-b);
+}
+
+/** Add any registered, currently unassigned player to the event waiting list. */
+export function addWaitingPlayer(edition, eventId, id) {
+  if (!eventById(eventId) || eventId==='overall') return false;
+  if (!(edition.players||[]).some(p=>p.id===id)) return false;
+  if (activePairings(edition,eventId).some(p=>p.a===id||p.b===id)) return false;
+  const ids=waitingPlayerIds(edition,eventId);
+  if (ids.includes(id)) return false;
+  storeWaiting(edition,eventId,[...ids,id]);
+  return true;
+}
+
+/** Remove just this player from the waiting list, without erasing results. */
+export function removeWaitingPlayer(edition, eventId, id) {
+  const ids=waitingPlayerIds(edition,eventId);
+  if (!ids.includes(id)) return false;
+  storeWaiting(edition,eventId,ids.filter(n=>n!==id));
+  return true;
+}
+
+/** Completed games send both participants back to waiting if an explicit list exists. */
+export function returnPlayersToWaiting(edition, eventId, a, b) {
+  if (!Array.isArray(edition.waitingPlayers?.[eventId])) return;
+  storeWaiting(edition,eventId,[...waitingPlayerIds(edition,eventId),a,b]);
+}
+
 /** Reservations live separately from match results; older saved data has no such field. */
 export function activePairings(edition, eventId) {
   return (edition.pendingPairings || []).filter(p=>p.event===eventId);
@@ -111,7 +155,7 @@ export function unplayedPairs(edition, eventId) {
     played.add(key(m.a,m.b));
   }
   const busy=new Set(activePairings(edition,eventId).flatMap(p=>[p.a,p.b]));
-  const ids=[...counts.keys()].filter(id=>!busy.has(id)).sort((a,b)=>a-b),pairs=[];
+  const ids=waitingPlayerIds(edition,eventId).filter(id=>!busy.has(id)),pairs=[];
   for (let i=0;i<ids.length;i++) for (let j=i+1;j<ids.length;j++) {
     const a=ids[i],b=ids[j];
     if (!played.has(key(a,b))) pairs.push({a,b,playedA:counts.get(a),playedB:counts.get(b)});

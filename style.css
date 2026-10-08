@@ -152,3 +152,70 @@ html{scroll-padding-top:100px}
 @media print{
   .topbar{position:static;box-shadow:none}
 }
+
+/* v12: progression management entry grid. The two participants fill the row,
+   and the clear-input action occupies a narrow third column. */
+.entry-form .scoreline{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr) 52px;
+  gap:8px;
+  align-items:start;
+}
+.match-player-controls{gap:5px}
+.entry-form .winner-button{
+  display:block;
+  width:100%;
+  min-width:0;
+  height:36px;
+  margin-top:10px;
+}
+.match-clear{min-width:0}
+.match-clear button{
+  width:100%;
+  min-width:0;
+  height:41px;
+  padding:5px 2px;
+  margin-top:23px;
+}
+.entry-form .result-row{margin-top:16px}
+.entry-form .scoreline .match-no-field,
+.entry-form .scoreline .match-no-field input{flex-basis:42px;width:42px}
+.entry-form .scoreline .match-name-field{min-width:0;flex:1 1 0}
+.entry-form .scoreline .match-name-field select{min-width:0;width:100%}
+
+/* Attendance buttons in 成績管理; the separate 選手管理 checkbox grid is unchanged. */
+.attendance-option{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:7px;
+  padding:6px 9px;
+  border:1px solid #dfe6e2;
+  border-radius:7px;
+  font-size:12px;
+}
+.attendance-option>span{min-width:0}
+.attendance-toggle{
+  flex:0 0 58px;
+  padding:6px 3px;
+  border:1px solid #cbd9d2;
+  border-radius:6px;
+  background:#fff;
+  color:#42584e;
+  font-weight:700;
+}
+.attendance-toggle.attending{
+  background:#fff5c7;
+  border-color:#e3c872;
+  color:#584b1f;
+}
+.attendance-toggle:focus-visible{outline:2px solid #92bdab;outline-offset:2px}
+@media(max-width:410px){
+  .entry-form .scoreline{grid-template-columns:minmax(0,1fr) minmax(0,1fr) 45px;gap:5px}
+  .match-player-controls{gap:3px}
+  .entry-form .scoreline .match-no-field,
+  .entry-form .scoreline .match-no-field input{width:38px;flex-basis:38px}
+  .entry-form .scoreline .match-no-field input{height:42px}
+  .entry-form .scoreline .match-name-field select{font-size:10px;padding-left:2px;padding-right:2px}
+  .match-clear button{font-size:11px}
+}

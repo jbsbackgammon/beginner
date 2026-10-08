@@ -42,3 +42,10 @@ for(const id of ['day1','overall']){
   assert.ok(Math.abs(widths.reduce((a,b)=>a+b,0)-100)<0.00001);
  });
 }
+
+test('2pt final-results PDF prints 引分 rather than 引 in the column header',()=>{
+ const html=render('two');
+ assert.match(html,/<th>引分<\/th>/);
+ assert.doesNotMatch(html,/<th>引<\/th>/);
+ assert.match(html,/data-label="引分"/);
+});

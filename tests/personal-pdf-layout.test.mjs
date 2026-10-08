@@ -30,7 +30,9 @@ test('PDF uses number-sorted cards, prominent rank, separated dates and associat
  const html=fn.personalReportHTML('day1');
  assert.match(html,/BACKGAMMON CLASSIC 2026/);
  assert.match(html,/初級戦Day1　個人成績 #\d+/);
- assert.match(html,/class="personal-rank">第\d+位/);
+ assert.match(html,/class="personal-rank">優勝<\/div>/);
+ assert.doesNotMatch(html,/class="personal-rank">第1位<\/div>/);
+ assert.match(html,/class="personal-rank">第2位<\/div>/);
  assert.match(html,/勝越-?\d+　勝率\d+\.\d%/);
  assert.match(html,/得点\d+　失点-\d+　得失点差-?\d+/);
  assert.match(html,/2026-10-10　ワイヤーズホテル品川シーサイド/);
@@ -73,4 +75,8 @@ test('every personal match row uses the same ten-slot left-aligned grid',()=>{
  assert.match(style,/grid-template-columns:repeat\(10,var\(--personal-dot-size\)\)!important/);
  assert.match(style,/width:var\(--personal-row-width\)!important/);
  assert.match(style,/justify-content:start!important/);
+});
+
+test('the individual PDF rank is at least 28pt while summary text stays regular weight',()=>{
+ assert.match(style,/#print-area \.personal-card \.personal-rank \{\s*font-size:28pt!important/);
 });

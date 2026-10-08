@@ -276,7 +276,7 @@ function rosterEventChange(button){
 
 function reportHTML(id){
  const e=eventById(id),rows=standings(ed(),id),date=id==='overall'?dateFor('day3'):dateFor(id),isTwo=id==='two',overall=id==='overall';
- const headers=['順位','選手',isTwo?'③試合':'試合','勝','負',...(isTwo?['引']:[]),isTwo?'①勝越':'②勝越',isTwo?'②勝率':'③勝率',...(!isTwo?['得点','失点','①得失点差']:[]),...(overall?['Day']:[])];
+ const headers=['順位','選手',isTwo?'③試合':'試合','勝','負',...(isTwo?['引分']:[]),isTwo?'①勝越':'②勝越',isTwo?'②勝率':'③勝率',...(!isTwo?['得点','失点','①得失点差']:[]),...(overall?['Day']:[])];
  const displayHeader=h=>{const m=/^([①②③])(.+)$/.exec(h);return m?`<span class="rank-header-label">${esc(m[2])}</span><small class="rank-header-order">ー ${'①②③'.indexOf(m[1])+1} ー</small>`:esc(h);};
  const tr=rows.map(r=>{
   const vals=[r.rank,esc(`${r.name} #${r.id}`),r.matches,r.wins,r.losses,...(isTwo?[r.draws]:[]),`${r.spread>0?'+':''}${r.spread}`,formatRate(r.rate),...(!isTwo?[r.scored,r.conceded,`${r.diff>0?'+':''}${r.diff}`]:[]),...(overall?[adoptedDayIcons(r)]:[])];
@@ -344,7 +344,7 @@ function personalReportHTML(id){
   return `<article class="personal-card">
    <div class="personal-event-title">${esc(pdfEditionTitle())}</div>
    <div class="personal-event-detail">${esc(label)}　個人成績 #${r.id}</div>
-   <div class="personal-rank">第${r.rank}位</div>
+   <div class="personal-rank">${r.rank===1?'優勝':`第${r.rank}位`}</div>
    <div class="personal-summary">${r.matches}試合　${r.wins}勝${r.losses}敗${two?` ${r.draws}引分`:''}　勝越${r.spread}　勝率${formatRate(r.rate)}</div>
    <div class="personal-score-totals">得点${scored}　失点${conceded}　得失点差${diff}</div>
    ${personalResultDots(id,r)}

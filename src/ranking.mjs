@@ -159,12 +159,14 @@ export function needsTournamentConfirmation(editions, now = Date.now()) {
  * A number-only query must match a complete player number (not score or match number).
  */
 export function historySearchMatches(match, rawQuery, players) {
-  const query=String(rawQuery??'').trim().toLocaleLowerCase();
+  const query=String(rawQuery??'').normalize('NFKC').trim().toLocaleLowerCase();
   if(!query)return true;
   const ids=[match.a,match.b];
+  // Treat a standalone player number as an exact ID, never a substring
+  // of #13, #30, a score, or a result-history match number.
   if(/^#?\d+$/.test(query)) {
     const number=Number(query.replace(/^#/,''));
-    return ids.includes(number);
+    return ids.some(id=>id===number);
   }
   return ids.some(id=>{
     const player=(players||[]).find(p=>p.id===id);

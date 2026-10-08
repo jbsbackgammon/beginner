@@ -27,7 +27,7 @@ function save(){try{localStorage.setItem(KEY,JSON.stringify(data))}catch(e){aler
 let noticeTimeout=null;
 function notice(msg){const n=$('notice');if(!n)return;clearTimeout(noticeTimeout);n.textContent=msg;n.title=msg;n.classList.add('show');noticeTimeout=setTimeout(()=>{n.classList.remove('show');n.textContent='';n.removeAttribute('title');},4000)}
 function eventSelect(selected,overall=false,id='event-picker'){return `<select id="${id}">${EVENTS.filter(e=>overall||e.id!=='overall').map(e=>`<option value="${e.id}" ${e.id===selected?'selected':''}>${esc(e.label)}</option>`).join('')}</select>`}
-function playerOptions(selected=null){return `<option value="">選手を選択</option>`+[...ed().players].sort((a,b)=>a.id-b.id).map(p=>`<option value="${p.id}" ${p.id===selected?'selected':''}>${esc(`#${p.id} ${p.name}`)}</option>`).join('')}
+function playerOptions(selected=null,excluded=null){return `<option value="">選手を選択</option>`+[...ed().players].filter(p=>p.id!==excluded).sort((a,b)=>a.id-b.id).map(p=>`<option value="${p.id}" ${p.id===selected?'selected':''}>${esc(`#${p.id} ${p.name}`)}</option>`).join('')}
 function renderEditionPicker(){const box=$('edition-picker');if(box)box.innerHTML=data.editions.map(e=>`<option value="${esc(e.id)}" ${e.id===ed()?.id?'selected':''}>${esc(e.name)}</option>`).join('')}
 function renderHeaderEvent(){
  const box=document.querySelector('.header-event'),select=$('header-event');
@@ -71,10 +71,10 @@ function pairingTable(pairs){
  const list=filtered.length?`<table class="data-table pairing-list"><thead><tr><th>対戦待ち</th><th>未対戦相手</th><th aria-label="操作"></th></tr></thead><tbody>${filtered.map(([id,opps])=>`<tr><td class="pairing-name">${esc(playerLabel(id))}</td><td class="pairing-opponents"><div class="opponents">${opps.length?opps.sort((a,b)=>a-b).map(n=>`<button type="button" class="opponent-no" data-action="pick-pair" data-a="${id}" data-b="${n}" title="${esc(player(n)?.name||playerLabel(n))}" aria-label="${esc(playerLabel(n))}と対戦を組む">${n}</button>`).join(''):'<span class="muted">ー</span>'}</div></td><td class="pairing-actions"><button type="button" class="btn small pairing-remove" data-action="remove-waiting" data-id="${id}" aria-label="${esc(playerLabel(id))}を対戦待ちから削除">削除</button></td></tr>`).join('')}</tbody></table>`:`<div class="empty">${busy.length?'対戦待ちの選手がいません':'対戦待ちの選手がいません'}</div>`;
  return list;
 }
-function matchPlayerField(side,id,label,winningSide,pairReady){
+function matchPlayerField(side,id,label,winningSide,pairReady,otherId){
  const selected=winningSide===side,other=['a','b'].includes(winningSide)&&winningSide!==side;
  const state=selected?'win':other?'lose':'';
- return `<div class="match-player"><div class="match-player-controls"><label class="field match-no-field"><input type="number" name="${side}_no" data-match-side="${side}" aria-label="${label}の番号" min="1" step="1" inputmode="numeric" value="${id||''}" placeholder="No."></label><label class="field match-name-field"><select name="${side}" data-match-side="${side}" aria-label="${label}の選手名">${playerOptions(id)}</select></label></div><button type="button" data-winner-button="${side}" class="winner-button ${state}" aria-pressed="${selected?'true':'false'}" ${pairReady?'':'disabled'}>${other?'負':'勝'}</button></div>`;
+ return `<div class="match-player"><div class="match-player-controls"><label class="field match-no-field"><input type="number" name="${side}_no" data-match-side="${side}" aria-label="${label}の番号" min="1" step="1" inputmode="numeric" value="${id||''}" placeholder="No."></label><label class="field match-name-field"><select name="${side}" data-match-side="${side}" aria-label="${label}の選手名">${playerOptions(id,otherId)}</select></label></div><button type="button" data-winner-button="${side}" class="winner-button ${state}" aria-pressed="${selected?'true':'false'}" ${pairReady?'':'disabled'}>${other?'負':'勝'}</button></div>`;
 }
 function renderEntry(){
  const e=eventById(activeEvent),matches=resultsFor(activeEvent),current=editingMatch?ed().matches.find(x=>x.id===editingMatch):null;
@@ -91,7 +91,7 @@ function renderEntry(){
  const middle=e.kind==='two'
    ? `<div class="vs match-versus two-controls"><span class="versus-label">VS</span><button type="button" class="draw-button" data-draw-button aria-pressed="false" ${pairReady?'':'disabled'}>引分</button></div>`
    : `<span class="vs match-versus" aria-hidden="true">VS</span>`;
- const form=`<form id="match-form" data-kind="${e.kind}" data-winner="${winningSide}" data-player-pair="${first||''}:${second||''}"><div class="scoreline ${e.kind==='two'?'two-entry':''}">${matchPlayerField('a',first,'左選手',winningSide,pairReady)}${middle}${matchPlayerField('b',second,'右選手',winningSide,pairReady)}</div><div class="result-row">${resultControl}<button type="submit" class="btn primary" disabled>${current?'結果を更新':'結果登録'}</button></div>${current?'<div class="btnset"><button type="button" class="btn" data-action="cancel-match">編集を取り消す</button></div>':''}</form>`;
+ const form=`<form id="match-form" data-kind="${e.kind}" data-winner="${winningSide}" data-player-pair="${first||''}:${second||''}"><div class="scoreline ${e.kind==='two'?'two-entry':''}">${matchPlayerField('a',first,'左選手',winningSide,pairReady,second)}${middle}${matchPlayerField('b',second,'右選手',winningSide,pairReady,first)}</div><div class="result-row">${resultControl}<button type="submit" class="btn primary" disabled>${current?'結果を更新':'結果登録'}</button></div>${current?'<div class="btnset"><button type="button" class="btn" data-action="cancel-match">編集を取り消す</button></div>':''}</form>`;
  return `<div class="entry-grid"><div class="entry-left"><section class="box entry-form"><h3>結果入力</h3>${form}</section><section class="box entry-pairings"><div class="section-head pairing-title"><h3>対戦斡旋</h3>${addControl}</div><div id="pair-results" class="table-scroll spaced pairing-scroll">${pairingTable(pairs)}</div></section></div><section class="box entry-history"><div class="section-head history-title"><h3>結果履歴</h3><input id="history-filter" placeholder="選手名・番号で検索" value="${esc(historySearch)}" aria-label="結果履歴検索"></div><div id="history-results" class="table-scroll spaced history-scroll">${historyTable(matches)}</div></section></div>`;
 }
 function updateSubmitEnabled(form){
@@ -125,11 +125,28 @@ function setWinner(form,side){
  if(draw){draw.classList.toggle('selected',side==='draw');draw.setAttribute('aria-pressed',String(side==='draw'));}
  updateSubmitEnabled(form);
 }
+// Keep each player's name dropdown free of the opponent's current selection.
+// Rebuild both sides when a name or number changes so previously excluded
+// players become available again as soon as the other side changes.
+function refreshMatchPlayerOptions(form,changedSide){
+ const selects={a:form.elements.namedItem('a'),b:form.elements.namedItem('b')};
+ const values={a:selects.a.value,b:selects.b.value};
+ if(values.a&&values.a===values.b){
+  // Duplicate number input is not a valid dropdown selection. Preserve the
+  // number field for correction, but keep the other side's existing player.
+  values[changedSide]='';
+ }
+ for(const side of ['a','b']){
+  const opponent=values[side==='a'?'b':'a'];
+  selects[side].innerHTML=playerOptions(values[side]?Number(values[side]):null,opponent?Number(opponent):null);
+ }
+}
 function syncMatchPlayer(el){
  const form=el.closest('#match-form');if(!form)return;
  const side=el.dataset.matchSide,number=form.elements.namedItem(side+'_no'),select=form.elements.namedItem(side);
  if(el.tagName==='SELECT')number.value=select.value;
  else {const parsed=Number(number.value);select.value=number.value!==''&&player(parsed)?String(parsed):'';}
+ refreshMatchPlayerOptions(form,side);
  const pair=String(form.elements.namedItem('a')?.value||'')+':'+String(form.elements.namedItem('b')?.value||'');
  if(form.dataset.playerPair!==pair){
   form.dataset.playerPair=pair;

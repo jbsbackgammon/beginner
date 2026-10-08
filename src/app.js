@@ -23,6 +23,30 @@ const player=(id)=>ed().players.find(x=>x.id===id);
 const playerLabel=id=>{const p=player(id);return p?`#${p.id} ${p.name}`:`#${id}（未登録）`};
 const formatRate=n=>`${(n*100).toFixed(1)}%`;
 const dayName=id=>({'day1':'Day1','day2':'Day2','day3':'Day3'}[id]||id);
+// The three symbols identify the event days, not three separate ranking positions.
+// Always reserve three fixed positions.  A day is visible only when the player
+// entered it (or has a recorded result), so ①②③ line up between players.
+function adoptedDayIcons(row){
+ const registered=new Set(player(row.id)?.entries||[]);
+ const adopted=new Set(row.selectedDays||[]);
+ const symbols={day1:'①',day2:'②',day3:'③'};
+ const content=['day1','day2','day3'].map(day=>{
+  const entered=registered.has(day)||ed().matches.some(m=>m.event===day&&(m.a===row.id||m.b===row.id));
+  if(!entered)return `<span class="adopted-day is-not-entered" aria-hidden="true"></span>`;
+  return `<span class="adopted-day ${adopted.has(day)?'is-adopted':'is-not-adopted'}" title="${esc(dayName(day))}${adopted.has(day)?'（採用）':'（不採用）'}" aria-label="${esc(dayName(day))}${adopted.has(day)?'採用':'不採用'}">${symbols[day]}</span>`;
+ }).join('');
+ return `<span class="adopted-days" aria-label="採用Day">${content}</span>`;
+}
+function pdfEditionTitle(){
+ // The blank template has a generic name; its 2026 competition PDF uses the official event title.
+ return ed().name===DEFAULT_EDITION_NAME?'BACKGAMMON CLASSIC 2026':ed().name;
+}
+function pdfHeading(eventId){
+ const label=eventById(eventId)?.label||'';
+ const date=eventId==='overall'?dateFor('day3'):dateFor(eventId);
+ return `<div class="report-heading"><h2>${esc(pdfEditionTitle())} ${esc(label)} 最終成績</h2><small>${esc(date)}・ワイヤーズホテル品川シーサイド・主催 日本バックギャモン協会</small></div>`;
+}
+
 function save(){try{localStorage.setItem(KEY,JSON.stringify(data))}catch(e){alert('ブラウザに保存できません。JSONバックアップを出力してください。')}renderEditionPicker();}
 let noticeTimeout=null;
 function notice(msg){const n=$('notice');if(!n)return;clearTimeout(noticeTimeout);n.textContent=msg;n.title=msg;n.classList.add('show');noticeTimeout=setTimeout(()=>{n.classList.remove('show');n.textContent='';n.removeAttribute('title');},4000)}
@@ -173,7 +197,7 @@ function statsTable(eventId,preview=false){
    td('順位',`<strong>${r.rank}</strong>`,'standings-rank'),td('選手',esc(`#${r.id} ${r.name}`),'player-name'),td(isTwo?'③試合':'試合',r.matches),td('勝',r.wins),td('負',r.losses),
    ...(isTwo?[td('引分',r.draws)]:[]),td('勝越',`${r.spread>0?'+':''}${r.spread}`,r.spread>=0?'pos':'neg'),td('勝率',formatRate(r.rate)),
    ...(!isTwo?[td('得点',r.scored),td('失点',r.conceded),td('得失点',`${r.diff>0?'+':''}${r.diff}`,r.diff>=0?'pos':'neg')]:[]),
-   ...(overall?[td('採用Day',(r.selectedDays||[]).map(dayName).join('＋'))]:[])
+   ...(overall?[td('採用Day',adoptedDayIcons(r),'adopted-days-cell')]:[])
   ];
   return `<tr class="${r.rank<=3?'podium':''}">${cells.join('')}</tr>`;
  });
@@ -247,10 +271,36 @@ function reportHTML(id){
  const e=eventById(id),rows=standings(ed(),id),date=id==='overall'?dateFor('day3'):dateFor(id),isTwo=id==='two',overall=id==='overall';
  const headers=['順位','選手',isTwo?'③試合':'試合','勝','負',...(isTwo?['引']:[]),isTwo?'①勝越':'②勝越',isTwo?'②勝率':'③勝率',...(!isTwo?['得点','失点','①得失点差']:[]),...(overall?['採用Day']:[])];
  const tr=rows.map(r=>{
-  const vals=[r.rank,esc(`#${r.id} ${r.name}`),r.matches,r.wins,r.losses,...(isTwo?[r.draws]:[]),`${r.spread>0?'+':''}${r.spread}`,formatRate(r.rate),...(!isTwo?[r.scored,r.conceded,`${r.diff>0?'+':''}${r.diff}`]:[]),...(overall?[(r.selectedDays||[]).map(dayName).join('＋')]:[])];
+  const vals=[r.rank,esc(`#${r.id} ${r.name}`),r.matches,r.wins,r.losses,...(isTwo?[r.draws]:[]),`${r.spread>0?'+':''}${r.spread}`,formatRate(r.rate),...(!isTwo?[r.scored,r.conceded,`${r.diff>0?'+':''}${r.diff}`]:[]),...(overall?[adoptedDayIcons(r)]:[])];
   return `<tr>${vals.map((v,i)=>`<td data-label="${headers[i]}"${i===0?' class="standings-rank"':''}>${v}</td>`).join('')}</tr>`;
  }).join('');
- return `<div class="report"><div class="report-heading"><div class="smallcaps">JAPAN BACKGAMMON SOCIETY</div><h2>${esc(ed().name)}　${esc(e.label)}　成績表</h2><small>${esc(date)}　／　日本バックギャモン協会</small></div><table class="report-data-table"><thead><tr>${headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${tr||`<tr><td colspan="12">成績データなし</td></tr>`}</tbody></table><p class="muted" style="margin-top:12px">${rows.length}名　／　${isTwo?'勝越→勝率→試合数':'得失点差→勝越→勝率'}順</p></div>`;
+ return `<div class="report">${pdfHeading(id)}<table class="report-data-table"><thead><tr>${headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${tr||`<tr><td colspan="12">成績データなし</td></tr>`}</tbody></table><p class="muted" style="margin-top:12px">${rows.length}名　／　${isTwo?'勝越→勝率→試合数':'得失点差→勝越→勝率'}順</p></div>`;
+}
+// A4 portrait: two columns by four rows, eight player cards per sheet.
+// Print the active event's ranking-eligible players, in ascending player-number order.
+function personalReportHTML(id){
+ const rows=standings(ed(),id).slice().sort((a,b)=>a.id-b.id);
+ const two=id==='two',overall=id==='overall',label=eventById(id)?.label||'';
+ const subtitle=id==='overall'?dateFor('day3'):dateFor(id);
+ const cell=r=>{
+  if(!r)return `<article class="personal-card is-blank" aria-hidden="true"></article>`;
+  return `<article class="personal-card">
+   <div class="personal-title">${esc(label)}　個人成績</div>
+   <div class="personal-name"><span>#${r.id}</span><strong>${esc(r.name)}</strong></div>
+   <div class="personal-standing"><b>第${r.rank}位</b><span>${r.matches}試合　${r.wins}勝 ${r.losses}敗${two?` ${r.draws}引分`:''}</span></div>
+   <div class="personal-stats"><span>勝越 <b>${r.spread>0?'+':''}${r.spread}</b></span><span>勝率 <b>${formatRate(r.rate)}</b></span>${two?'':`<span>得失点差 <b>${r.diff>0?'+':''}${r.diff}</b></span>`}</div>
+   ${two?'':`<div class="personal-extra">得点 ${r.scored}　失点 ${r.conceded}</div>`}
+   ${overall?`<div class="personal-days">採用Day　${adoptedDayIcons(r)}</div>`:''}
+   <div class="personal-meta">${esc(subtitle)}・主催 日本バックギャモン協会</div>
+  </article>`;
+ };
+ if(!rows.length)return `<div class="personal-sheets"><section class="personal-sheet"><div class="personal-empty">対象の成績がありません</div></section></div>`;
+ const sheets=[];
+ for(let start=0;start<rows.length;start+=8){
+  const segment=rows.slice(start,start+8);
+  sheets.push(`<section class="personal-sheet"><div class="personal-grid">${Array.from({length:8},(_,i)=>cell(segment[i])).join('')}</div></section>`);
+ }
+ return `<div class="personal-sheets">${sheets.join('')}</div>`;
 }
 function renderExport(){
  // Combined screen: compact print controls above the live standings table.
@@ -258,7 +308,8 @@ function renderExport(){
  return `<section class="box report-settings"><div class="report-controls">
   <label class="field report-name"><span>大会名</span><input id="edition-name-input" type="text" value="${esc(ed().name)}" maxlength="120"></label>
   <label class="field report-date"><span>開催日</span><input id="edition-date-input" type="date" value="${esc(dateFor(day))}"></label>
-  <button type="button" class="btn primary report-print" data-action="print">PDF出力</button>
+  <button type="button" class="btn primary report-print" data-action="print-all">全成績PDF</button>
+  <button type="button" class="btn primary report-print" data-action="print-personal">個人成績PDF</button>
  </div></section><section class="box report-rankings">${statsTable(activeEvent)}</section>`;
 }
 
@@ -381,7 +432,8 @@ function onAction(action,id){switch(action){
  }
  case 'rename-edition':{const name=prompt('大会データの名称',ed().name);if(!name?.trim())return;ed().name=name.trim();save();render();break}
  case 'delete-edition':{if(data.editions.length===1){alert('最後の大会は削除できません。');return}if(!confirm(`「${ed().name}」の選手・試合データをすべて削除しますか？`))return;data.editions=data.editions.filter(e=>e.id!==data.activeEditionId);data.activeEditionId=data.editions[0].id;save();render();break}
- case 'print':$('print-area').innerHTML=reportHTML(activeEvent);window.print();break;
+ case 'print-all':$('print-area').innerHTML=reportHTML(activeEvent);window.print();break;
+ case 'print-personal':$('print-area').innerHTML=personalReportHTML(activeEvent);window.print();break;
  }}
 document.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',()=>{tab=b.dataset.tab;editingMatch=null;render()}));
 document.querySelectorAll('[data-header-action]').forEach(b=>b.addEventListener('click',()=>onAction(b.dataset.headerAction)));

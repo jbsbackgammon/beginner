@@ -843,3 +843,74 @@ html{scroll-padding-top:100px}
     flex:0 1 50%;
   }
 }
+
+
+/* v38: compact rank column; selected/attended Day symbols in overall ranking. */
+@media screen and (min-width:701px){
+  .standings-table{table-layout:auto}
+  .standings-table th:first-child,.standings-table td:first-child{
+    width:42px;min-width:42px;max-width:42px;padding-left:3px;padding-right:3px;
+    text-align:center!important;
+  }
+}
+.adopted-days{display:inline-grid;grid-template-columns:repeat(3,23px);align-items:center;justify-content:center;gap:4px;white-space:nowrap}
+.adopted-day{display:inline-flex;width:23px;height:23px;align-items:center;justify-content:center;border-radius:4px;
+  font-size:17px;font-weight:800;line-height:1;}
+.adopted-day.is-adopted{background:#16804e;color:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.adopted-day.is-not-adopted{background:transparent;color:#929a96}
+.adopted-day.is-not-entered{visibility:hidden}
+.standings-table td.adopted-days-cell,.report-data-table td:last-child:has(.adopted-days){text-align:center!important}
+
+/* PDF controls share the same row on desktop, and wrap without horizontal scrolling. */
+@media screen{
+ .report-controls{grid-template-columns:minmax(0,2fr) minmax(140px,1fr) auto auto}
+ .report-controls .report-print{min-width:116px}
+}
+@media screen and (max-width:850px){
+ .report-controls{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+ .report-controls .report-name{grid-column:1/-1}
+ .report-controls .report-date{grid-column:1/-1}
+ .report-controls .report-print{grid-column:auto;min-width:0}
+}
+@media screen and (max-width:390px){
+ .report-controls{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .report-controls .report-name,.report-controls .report-date{grid-column:1/-1}
+ .report-controls .report-print{grid-column:auto;font-size:15px;padding-inline:4px}
+}
+
+/* Full-results PDF: exactly two centered heading lines; no society tagline. */
+.report-heading{text-align:center}
+.report-heading h2{font-size:17px;font-weight:800;margin:0 0 5px;line-height:1.35}
+.report-heading small{font-size:12px;line-height:1.35;display:block;color:#343434}
+
+/* Individual PDFs, portrait A4 sheets with 8 equally sized cut-out panels. */
+@media print{
+ @page{size:A4 portrait;margin:0}
+ #print-area .report{width:190mm;max-width:190mm;margin:10mm auto;padding:0;border:0;box-shadow:none}
+ #print-area .report-heading{text-align:center}
+ #print-area .report-heading h2{font-size:15pt;margin:0 0 3mm}
+ #print-area .report-heading small{font-size:10pt;color:#333}
+ #print-area .report-data-table{font-size:8.5pt}
+ #print-area .report-data-table th,#print-area .report-data-table td{padding:3px}
+ #print-area .adopted-day{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+ #print-area .personal-sheets{display:block;width:210mm}
+ #print-area .personal-sheet{width:210mm;height:297mm;padding:10mm;break-after:page;page-break-after:always;overflow:hidden}
+ #print-area .personal-sheet:last-child{break-after:auto;page-break-after:auto}
+ #print-area .personal-grid{width:190mm;height:277mm;display:grid;grid-template-columns:repeat(2,95mm);grid-template-rows:repeat(4,69.25mm);gap:0}
+ #print-area .personal-card{width:95mm;height:69.25mm;border:0.28mm solid #666;display:flex;flex-direction:column;gap:2mm;padding:5mm;
+  box-sizing:border-box;break-inside:avoid;page-break-inside:avoid;overflow:hidden;color:#161616}
+ #print-area .personal-title{font-size:9pt;color:#576e61;font-weight:700;border-bottom:0.3mm solid #b6ccc0;padding-bottom:1.5mm;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ #print-area .personal-name{font-size:13pt;display:flex;gap:3mm;align-items:baseline;overflow-wrap:anywhere}
+ #print-area .personal-name>span{font-weight:800;color:#146e4d}
+ #print-area .personal-name>strong{font-weight:800;line-height:1.2}
+ #print-area .personal-standing{display:flex;gap:3mm;align-items:baseline;flex-wrap:wrap;font-size:10pt}
+ #print-area .personal-standing>b{font-size:15pt;color:#146e4d}
+ #print-area .personal-stats{display:flex;gap:4mm;flex-wrap:wrap;font-size:9pt}
+ #print-area .personal-extra,#print-area .personal-days{font-size:9pt}
+ #print-area .personal-days{display:flex;align-items:center;gap:2mm}
+ #print-area .personal-days .adopted-days{grid-template-columns:repeat(3,5mm);gap:2mm}
+ #print-area .personal-days .adopted-day{width:5mm;height:5mm;font-size:11pt}
+ #print-area .personal-meta{margin-top:auto;font-size:7pt;color:#555}
+ #print-area .personal-empty{font-size:16pt;text-align:center;padding-top:35mm}
+}

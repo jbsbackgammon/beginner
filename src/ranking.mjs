@@ -8,6 +8,16 @@ export const EVENTS = [
 ];
 export const eventById = (id) => EVENTS.find(e => e.id === id);
 export const allowedCubePoints = [1,2,3,4,6,8,12];
+/** Only an explicit win/draw selection compatible with the score can be registered. */
+export function canRegisterSelection(kind, selection, score='') {
+  if(kind==='two'){
+    return (selection==='a'&&['2-0','2-1'].includes(score))
+      || (selection==='b'&&['1-2','0-2'].includes(score))
+      || (selection==='draw'&&score==='1-1');
+  }
+  return (kind==='points'||kind==='cube')&&['a','b'].includes(selection);
+}
+
 export function validMatch(m, playerIds) {
   const ev = eventById(m.event);
   if (!ev || ev.kind === 'overall') return '大会が正しくありません。';
@@ -34,6 +44,41 @@ export function assignRanks(arr, kind) {
   sorted.forEach((x,i)=>x.rank=(i && compareStats(sorted[i-1],x,kind)===0)?sorted[i-1].rank:i+1);
   return sorted;
 }
+/** Assign permanent, event-local match numbers to legacy results in entry order.
+ * Numbers are never recycled after deletion; edits retain the original number.
+ */
+export function ensureMatchNumbers(edition) {
+  const matches=edition.matches||[];
+  if (!edition.nextMatchNumbers || typeof edition.nextMatchNumbers!=='object' || Array.isArray(edition.nextMatchNumbers)) edition.nextMatchNumbers={};
+  for(const event of EVENTS.filter(e=>e.id!=='overall')) {
+    const eventMatches=matches.filter(m=>m.event===event.id);
+    const used=new Set();
+    let highest=0;
+    for(const m of eventMatches) {
+      if(Number.isSafeInteger(m.matchNo) && m.matchNo>0 && !used.has(m.matchNo)) {
+        used.add(m.matchNo);
+        highest=Math.max(highest,m.matchNo);
+      }else{
+        m.matchNo=null;
+      }
+    }
+    // Existing entries (including imported Excel records) retain their array order.
+    for(const m of eventMatches) if(m.matchNo===null) m.matchNo=++highest;
+    const previous=edition.nextMatchNumbers[event.id];
+    edition.nextMatchNumbers[event.id]=Math.max(Number.isSafeInteger(previous)&&previous>0?previous:1,highest+1);
+  }
+  return edition;
+}
+
+/** Reserve a new number only when a result is first created. */
+export function nextMatchNumber(edition,eventId) {
+  if(!EVENTS.some(e=>e.id===eventId&&e.id!=='overall')) throw Error('Unknown match event');
+  ensureMatchNumbers(edition);
+  const number=edition.nextMatchNumbers[eventId];
+  edition.nextMatchNumbers[eventId]=number+1;
+  return number;
+}
+
 export function standings(edition,eventId) {
   if (eventId==='overall') return overallStandings(edition);
   const ev=eventById(eventId);

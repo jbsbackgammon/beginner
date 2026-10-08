@@ -30,9 +30,9 @@ test('PDF uses number-sorted cards, prominent rank, separated dates and associat
  const html=fn.personalReportHTML('day1');
  assert.match(html,/BACKGAMMON CLASSIC 2026/);
  assert.match(html,/初級戦Day1　個人成績 #\d+/);
- assert.match(html,/class="personal-rank"><span class="personal-rank-label">優勝<span class="personal-rank-total">\/\d+名<\/span><\/span><\/div>/);
+ assert.match(html,/class="personal-rank"><span class="personal-rank-label">優勝<\/span><span class="personal-rank-total"> \/ \d+名<\/span><\/div>/);
  assert.doesNotMatch(html,/class="personal-rank-label">第1位/);
- assert.match(html,/class="personal-rank-label">第2位<span class="personal-rank-total">\/\d+名<\/span>/);
+ assert.match(html,/class="personal-rank-label">第2位<\/span><span class="personal-rank-total"> \/ \d+名<\/span>/);
  assert.match(html,/勝越-?\d+　勝率\d+\.\d%/);
  assert.match(html,/得点\d+　失点-\d+　得失点差-?\d+/);
  assert.match(html,/2026-10-10　ワイヤーズホテル品川シーサイド/);
@@ -81,13 +81,14 @@ test('the individual PDF rank is at least 28pt while summary text stays regular 
  assert.match(style,/#print-area \.personal-card \.personal-rank \{\s*font-size:28pt!important/);
 });
 
-test('personal PDF count uses the number of ranked players and does not change rank centering',()=>{
+test('personal PDF count uses ranked players and centers the whole rank-and-count group',()=>{
  const html=fn.personalReportHTML('day1');
  const participantCount=standings(demo,'day1').length;
- const totals=[...html.matchAll(/class="personal-rank-total">\/(\d+)名<\/span>/g)];
+ const totals=[...html.matchAll(/class="personal-rank-total"> \/ (\d+)名<\/span>/g)];
  assert.equal(totals.length,participantCount);
  assert.ok(totals.every(m=>Number(m[1])===participantCount));
- assert.match(style,/#print-area \.personal-card \.personal-rank-label \{\s*position:relative;\s*display:inline-block;/);
- assert.match(style,/#print-area \.personal-card \.personal-rank-total \{\s*position:absolute;\s*left:100%;\s*bottom:0;/);
+ assert.match(style,/#print-area \.personal-card \.personal-rank \{\s*display:flex!important;\s*justify-content:center!important;\s*align-items:flex-end!important;/);
+ assert.match(style,/#print-area \.personal-card \.personal-rank-total \{[^}]*white-space:pre!important;/);
+ assert.doesNotMatch(style,/#print-area \.personal-card \.personal-rank-total \{[^}]*position:absolute;/);
  assert.match(style,/#print-area \.personal-card \.personal-rank-total \{[^}]*font-size:11pt!important;/);
 });

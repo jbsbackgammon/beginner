@@ -1516,24 +1516,25 @@ html{scroll-padding-top:100px}
 }
 
 
-/* v53: centre the ranking word itself.  The number of ranked players is
-   positioned immediately after the word, outside the centred width, with
-   both text boxes aligned at the bottom.  The added suffix never shifts the
-   horizontal centre of 優勝 or 第n位. */
+/* v56: Center the whole rank/participant-count combination.  The label keeps
+   its 28pt size, and the smaller participant count aligns to its bottom edge.
+   The suffix preserves the ASCII spaces in "第2位 / 29名". */
 @media print {
+  #print-area .personal-card .personal-rank {
+    display:flex!important;
+    justify-content:center!important;
+    align-items:flex-end!important;
+    white-space:nowrap!important;
+  }
   #print-area .personal-card .personal-rank-label {
-    position:relative;
     display:inline-block;
     white-space:nowrap;
+    line-height:1!important;
   }
   #print-area .personal-card .personal-rank-total {
-    position:absolute;
-    left:100%;
-    bottom:0;
-    margin-left:.7mm;
     font-size:11pt!important;
     font-weight:400!important;
     line-height:1!important;
-    white-space:nowrap;
+    white-space:pre!important;
   }
 }

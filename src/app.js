@@ -4,10 +4,12 @@ const eventIds=EVENTS.filter(e=>e.id!=='overall').map(e=>e.id);
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const DEFAULT_EDITION_NAME='BACKGAMMON FESTIVAL 20XX';
-const initial=()=>({schema:1,activeEditionId:'classic-2026',editions:[{id:'classic-2026',name:DEFAULT_EDITION_NAME,players:[],matches:[],pendingPairings:[],dates:Object.fromEntries(EVENTS.map(e=>[e.id,e.date]))}]});
+const DEFAULT_VENUE='ワイヤーズホテル品川シーサイド';
+const initial=()=>({schema:1,activeEditionId:'classic-2026',editions:[{id:'classic-2026',name:DEFAULT_EDITION_NAME,venue:DEFAULT_VENUE,players:[],matches:[],pendingPairings:[],dates:Object.fromEntries(EVENTS.map(e=>[e.id,e.date]))}]});
 let data;try{data=JSON.parse(localStorage.getItem(KEY)||'null')}catch{data=null}
 if(!data || data.schema!==1 || !Array.isArray(data.editions))data=initial();
 for(const edition of data.editions){
+  if(typeof edition.venue!=='string')edition.venue=DEFAULT_VENUE;
   ensureMatchNumbers(edition);
   migrateReservedWaiting(edition);
   // Change only the prefilled starter label; never overwrite a customized name.
@@ -41,10 +43,12 @@ function pdfEditionTitle(){
  // The blank template has a generic name; its 2026 competition PDF uses the official event title.
  return ed().name===DEFAULT_EDITION_NAME?'BACKGAMMON CLASSIC 2026':ed().name;
 }
+function venueFor(){return typeof ed().venue==='string'?ed().venue:DEFAULT_VENUE}
 function pdfHeading(eventId){
  const label=eventById(eventId)?.label||'';
  const date=eventId==='overall'?dateFor('day3'):dateFor(eventId);
- return `<div class="report-heading"><h2>${esc(pdfEditionTitle())} ${esc(label)} 最終成績</h2><small>${esc(date)}・ワイヤーズホテル品川シーサイド・主催 日本バックギャモン協会</small></div>`;
+ const detail=[date,venueFor(),'主催 日本バックギャモン協会'].filter(Boolean).join('・');
+ return `<div class="report-heading"><h2>${esc(pdfEditionTitle())} ${esc(label)} 最終成績</h2><small>${esc(detail)}</small></div>`;
 }
 
 function save(){try{localStorage.setItem(KEY,JSON.stringify(data))}catch(e){alert('ブラウザに保存できません。JSONバックアップを出力してください。')}renderEditionPicker();}
@@ -295,7 +299,7 @@ function personalReportHTML(id){
    <div class="personal-stats"><span>勝越 <b>${r.spread>0?'+':''}${r.spread}</b></span><span>勝率 <b>${formatRate(r.rate)}</b></span>${two?'':`<span>得失点差 <b>${r.diff>0?'+':''}${r.diff}</b></span>`}</div>
    ${two?'':`<div class="personal-extra">得点 ${r.scored}　失点 ${r.conceded}</div>`}
    ${overall?`<div class="personal-days">採用Day　${adoptedDayIcons(r)}</div>`:''}
-   <div class="personal-meta">${esc(subtitle)}・主催 日本バックギャモン協会</div>
+   <div class="personal-meta">${esc([subtitle,venueFor(),'主催 日本バックギャモン協会'].filter(Boolean).join('・'))}</div>
   </article>`;
  };
  if(!rows.length)return `<div class="personal-sheets"><section class="personal-sheet"><div class="personal-empty">対象の成績がありません</div></section></div>`;
@@ -311,8 +315,9 @@ function renderExport(){
  const day=activeEvent==='overall'?'day3':activeEvent;
  return `<section class="box report-settings"><div class="report-controls">
   <label class="field report-name"><span>大会名</span><input id="edition-name-input" type="text" value="${esc(ed().name)}" maxlength="120"></label>
+  <label class="field report-venue"><span>会場名</span><input id="edition-venue-input" type="text" value="${esc(venueFor())}" maxlength="160"></label>
   <label class="field report-date"><span>開催日</span><input id="edition-date-input" type="date" value="${esc(dateFor(day))}"></label>
-  <button type="button" class="btn primary report-print" data-action="print-all">全成績PDF</button>
+  <button type="button" class="btn primary report-print" data-action="print-all">最終成績PDF</button>
   <button type="button" class="btn primary report-print" data-action="print-personal">個人成績PDF</button>
  </div></section><section class="box report-rankings">${statsTable(activeEvent)}</section>`;
 }
@@ -367,7 +372,7 @@ function normalizeImport(x){if(!x||x.schema!==1||!Array.isArray(x.editions))thro
    if(!eventIds.includes(key)||!Array.isArray(list)||list.some(id=>!Number.isInteger(id)||!pids.has(id))||new Set(list).size!==list.length)throw Error('対戦待ちに無効な選手番号があります。');
   }
  }
- e.dates=e.dates||{};for(const p of e.players){p.entries=Array.isArray(p.entries)?p.entries.filter(v=>eventIds.includes(v)):[]}ensureMatchNumbers(e);migrateReservedWaiting(e)}return x}
+ if(e.venue!==undefined&&typeof e.venue!=='string')throw Error('会場名が不正です。');e.venue=typeof e.venue==='string'?e.venue:DEFAULT_VENUE;e.dates=e.dates||{};for(const p of e.players){p.entries=Array.isArray(p.entries)?p.entries.filter(v=>eventIds.includes(v)):[]}ensureMatchNumbers(e);migrateReservedWaiting(e)}return x}
 function fileLoad(){const i=document.createElement('input');i.type='file';i.accept='.json,application/json';i.onchange=async()=>{if(!i.files?.length)return;try{const raw=JSON.parse(await i.files[0].text());const imported=normalizeImport(raw);let n=0;for(const e of imported.editions){if(data.editions.some(x=>x.id===e.id)){if(!confirm(`「${e.name}」が存在します。上書きしますか？（操作を取り消せません）`))continue;data.editions=data.editions.filter(x=>x.id!==e.id)}data.editions.push(e);data.activeEditionId=e.id;n++}if(n){save();render();notice(`${n}大会分のデータを取り込みました。`)}else notice('取り込みは行われませんでした。');}catch(e){alert('JSON取込エラー：'+e.message)}};i.click();}
 function toggleTestData(){
  if(data.activeEditionId===DEMO_EDITION_ID){
@@ -444,7 +449,7 @@ document.querySelectorAll('[data-header-action]').forEach(b=>b.addEventListener(
 renderHeaderEvent();
 $('header-event').addEventListener('change',e=>{activeEvent=e.target.value;editingMatch=null;preselectedPair=null;historySearch='';render()});
 $('app').addEventListener('submit',e=>{if(e.target.id==='match-form'){e.preventDefault();matchSave(e.target)}});
-$('app').addEventListener('change',e=>{if(e.target.id==='edition-picker'){data.activeEditionId=e.target.value;activeEvent='day1';$('header-event').value='day1';editingMatch=null;save();render()}else if(e.target.id==='edition-name-input'){const name=e.target.value.trim();if(!name){e.target.value=ed().name;return}ed().name=name;save();render();notice('大会名を保存しました。')}else if(e.target.matches('[data-match-side]')){syncMatchPlayer(e.target);if(e.target.matches('input[data-match-side]')&&e.target.value!==''&&!isEventEntrant(ed(),activeEvent,Number(e.target.value))){const wrong=e.target.value;e.target.value='';syncMatchPlayer(e.target);notice(`#${wrong} は${evLabel(activeEvent)}に出場登録されていません。`);}}else if(['result','points'].includes(e.target.name)&&e.target.closest('#match-form')){updateSubmitEnabled(e.target.closest('#match-form'))}else if(e.target.id==='edition-date-input'){const day=activeEvent==='overall'?'day3':activeEvent;ed().dates=ed().dates||{};ed().dates[day]=e.target.value;if(day==='day3')ed().dates.overall=e.target.value;save();render()}else if(e.target.matches('[data-roster-name]')){rosterNameChange(e.target)}else if(e.target.matches('[data-roster-kana]')){rosterKanaChange(e.target)}});
+$('app').addEventListener('change',e=>{if(e.target.id==='edition-picker'){data.activeEditionId=e.target.value;activeEvent='day1';$('header-event').value='day1';editingMatch=null;save();render()}else if(e.target.id==='edition-name-input'){const name=e.target.value.trim();if(!name){e.target.value=ed().name;return}ed().name=name;save();render();notice('大会名を保存しました。')}else if(e.target.matches('[data-match-side]')){syncMatchPlayer(e.target);if(e.target.matches('input[data-match-side]')&&e.target.value!==''&&!isEventEntrant(ed(),activeEvent,Number(e.target.value))){const wrong=e.target.value;e.target.value='';syncMatchPlayer(e.target);notice(`#${wrong} は${evLabel(activeEvent)}に出場登録されていません。`);}}else if(['result','points'].includes(e.target.name)&&e.target.closest('#match-form')){updateSubmitEnabled(e.target.closest('#match-form'))}else if(e.target.id==='edition-venue-input'){ed().venue=e.target.value.trim();save();render()}else if(e.target.id==='edition-date-input'){const day=activeEvent==='overall'?'day3':activeEvent;ed().dates=ed().dates||{};ed().dates[day]=e.target.value;if(day==='day3')ed().dates.overall=e.target.value;save();render()}else if(e.target.matches('[data-roster-name]')){rosterNameChange(e.target)}else if(e.target.matches('[data-roster-kana]')){rosterKanaChange(e.target)}});
 $('app').addEventListener('click',e=>{const rosterToggle=e.target.closest('[data-roster-event]');if(rosterToggle){rosterEventChange(rosterToggle);return}const win=e.target.closest('[data-winner-button]');if(win){const form=win.closest('#match-form');setWinner(form,form.dataset.winner===win.dataset.winnerButton?'':win.dataset.winnerButton);return}const draw=e.target.closest('[data-draw-button]');if(draw){const form=draw.closest('#match-form');setWinner(form,form.dataset.winner==='draw'?'':'draw');return}const b=e.target.closest('[data-action]');if(!b)return;if(b.dataset.action==='pick-pair'){
  const a=Number(b.dataset.a),c=Number(b.dataset.b);
  if(!unplayedPairs(ed(),activeEvent).some(p=>p.a===Math.min(a,c)&&p.b===Math.max(a,c))){notice('この組み合わせは斡旋できません。');render();return}

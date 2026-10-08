@@ -933,3 +933,14 @@ html{scroll-padding-top:100px}
   /* The ranking becomes cards on narrow screens. */
   .standings-table colgroup{display:none}
 }
+
+/* v40: event title, venue and date, followed by the two PDF actions. */
+@media screen and (min-width:851px){
+ .report-controls{grid-template-columns:minmax(0,1.4fr) minmax(0,1.35fr) minmax(148px,.9fr) auto auto;gap:10px}
+}
+@media screen and (max-width:850px){
+ .report-controls .report-venue{grid-column:1/-1}
+}
+@media screen and (max-width:390px){
+ .report-controls .report-venue{grid-column:1/-1}
+}

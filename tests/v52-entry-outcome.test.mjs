@@ -50,6 +50,8 @@ test('2pt draw button stays between top-row win / loss controls',()=>{
  assert.ok(html.indexOf('data-draw-button')<html.indexOf('data-winner-button="b"'));
  assert.ok(html.indexOf('data-draw-button')<html.indexOf('name="a_no"'));
  assert.match(html,/class="scoreline outcome-row two-entry"/);
+ assert.match(html,/<button[^>]*data-draw-button[^>]*>引分<\/button>/);
+ assert.doesNotMatch(html.match(/<button[^>]*data-draw-button[^>]*>引分<\/button>/)?.[0]||'',/ disabled/);
 });
 
 test('correcting a result reflects the saved outcome, including right-side wins and 2pt draws',()=>{
@@ -70,5 +72,26 @@ test('selecting a different pair resets the default to a left-side win',()=>{
  const end=js.indexOf('\nfunction statsTable(',start);
  assert.ok(start>=0&&end>start);
  assert.match(js.slice(start,end),/setWinner\(form,'a'\)/);
+ assert.match(js.slice(start,end),/if\(hadPair\)setWinner\(form,'a'\)/);
  assert.match(css,/\.entry-form \.scoreline\.outcome-row\s*\{\s*margin-bottom:10px/);
+});
+
+test('draw selected before choosing players remains selected until both players are set',()=>{
+ const start=js.indexOf('function syncMatchPlayer(el){');
+ const end=js.indexOf('\nfunction statsTable(',start);
+ const winnerResets=[];
+ const sync=Function('refreshMatchPlayerOptions','setWinner','updateSubmitEnabled',js.slice(start,end)+'\nreturn syncMatchPlayer;')(
+  ()=>{},(form,side)=>{winnerResets.push(side);form.dataset.winner=side;},()=>{}
+ );
+ const fields={a:{value:''},b:{value:''},a_no:{value:''},b_no:{value:''},result:{value:''}};
+ const form={dataset:{playerPair:':',winner:'draw'},elements:{namedItem:name=>fields[name]}};
+ const select=side=>({tagName:'SELECT',dataset:{matchSide:side},closest:()=>form});
+ fields.a.value='1';sync(select('a'));
+ assert.equal(form.dataset.winner,'draw');
+ fields.b.value='2';sync(select('b'));
+ assert.equal(form.dataset.winner,'draw');
+ assert.deepEqual(winnerResets,[]);
+ fields.b.value='3';sync(select('b'));
+ assert.equal(form.dataset.winner,'a');
+ assert.deepEqual(winnerResets,['a']);
 });

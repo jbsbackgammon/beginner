@@ -116,7 +116,6 @@ function renderEntry(){
  const first=current?.a||preselectedPair?.a||null,second=current?.b||preselectedPair?.b||null;
  // New registrations start with the left player winning. Corrections reflect the recorded result.
  const winningSide=current?(current.sa===current.sb?'draw':current.sa>current.sb?'a':'b'):'a';
- const pairReady=Boolean(first&&second&&first!==second&&isEventEntrant(ed(),activeEvent,first)&&isEventEntrant(ed(),activeEvent,second));
  const twoScore=current?`${current.sa}-${current.sb}`:'';
  const pts=e.kind==='cube'?[1,2,3,4,6,8,12]:[1,2,3];
  const pointsLabel=e.kind==='points'?{1:'1-0 シングル勝ち',2:'2-0 ギャモン勝ち',3:'3-0 バックギャモン勝ち'}:Object.fromEntries(pts.map(n=>[n,`${n}-0`]));
@@ -125,21 +124,18 @@ function renderEntry(){
  const addControl=`<div class="pairing-add"><select id="pair-add-player" aria-label="対戦待ちに追加する選手番号" ${addable.length?'':'disabled'}><option value="">選手選択</option>${addable.map(p=>`<option value="${p.id}">${esc(`${p.name} #${p.id}`)}</option>`).join('')}</select><button type="button" class="btn small" data-action="add-waiting" ${addable.length?'':'disabled'}>追加</button></div>`;
  const pairs=unplayedPairs(ed(),activeEvent);
  const drawButton=e.kind==='two'
-   ? `<button type="button" class="draw-button ${winningSide==='draw'?'selected':''}" data-draw-button aria-pressed="${winningSide==='draw'}" ${pairReady?'':'disabled'}>引分</button>`
+   ? `<button type="button" class="draw-button ${winningSide==='draw'?'selected':''}" data-draw-button aria-pressed="${winningSide==='draw'}">引分</button>`
    : `<span aria-hidden="true"></span>`;
  const form=`<form id="match-form" data-kind="${e.kind}" data-winner="${winningSide}" data-player-pair="${first||''}:${second||''}"><div class="scoreline outcome-row ${e.kind==='two'?'two-entry':''}">${outcomeButton('a',winningSide)}${drawButton}${outcomeButton('b',winningSide)}</div><div class="scoreline ${e.kind==='two'?'two-entry':''}">${matchPlayerField('a',first,'左選手',second)}<span class="vs match-versus" aria-hidden="true">VS</span>${matchPlayerField('b',second,'右選手',first)}</div><div class="result-row">${resultControl}<div class="result-actions">${current?'<button type="button" class="btn" data-action="cancel-match">編集取消</button>':''}<button type="submit" class="btn primary" disabled>${current?'結果更新':'結果登録'}</button></div></div></form>`;
  return `<div class="entry-grid"><div class="entry-left"><section class="box entry-form"><h3>結果入力</h3>${form}</section><section class="box entry-pairings"><div class="section-head pairing-title"><h3>対戦斡旋</h3>${addControl}</div><div id="pair-results" class="table-scroll spaced pairing-scroll">${pairingTable(pairs)}</div></section></div><section class="box entry-history"><div class="section-head history-title"><h3>結果履歴</h3><input id="history-filter" placeholder="選手名・番号で検索" value="${esc(historySearch)}" aria-label="結果履歴検索"></div><div id="history-results" class="table-scroll spaced history-scroll">${historyTable(matches)}</div></section></div>`;
 }
 function updateSubmitEnabled(form){
  if(!form)return;
- // Winner / loser are preselected and remain operable before player selection.
+ // All outcome buttons, including the 2pt draw, remain operable before player selection.
  // Score and submission still require two different registered players.
  const left=String(form.elements.namedItem('a')?.value||'');
  const right=String(form.elements.namedItem('b')?.value||'');
  const pairReady=Boolean(left&&right&&left!==right&&isEventEntrant(ed(),activeEvent,Number(left))&&isEventEntrant(ed(),activeEvent,Number(right)));
- form.querySelectorAll('[data-draw-button]').forEach(button=>{
-  button.disabled=!pairReady;
- });
  const outcomeSelected=pairReady&&['a','b','draw'].includes(form.dataset.winner)&&
   (form.dataset.winner!=='draw'||form.dataset.kind==='two');
  const scoreSelect=form.elements.namedItem('result')||form.elements.namedItem('points');
@@ -184,8 +180,11 @@ function syncMatchPlayer(el){
  refreshMatchPlayerOptions(form,side);
  const pair=String(form.elements.namedItem('a')?.value||'')+':'+String(form.elements.namedItem('b')?.value||'');
  if(form.dataset.playerPair!==pair){
+  // Preserve an outcome chosen before the two players are selected.
+  // Changing an already complete pair still resets to the usual left-side win.
+  const hadPair=(form.dataset.playerPair||'').split(':').filter(Boolean).length===2;
   form.dataset.playerPair=pair;
-  setWinner(form,'a');
+  if(hadPair)setWinner(form,'a');
   const score=form.elements.namedItem('result')||form.elements.namedItem('points');
   if(score)score.value='';
  }

@@ -41,16 +41,19 @@ test('unknown player numbers cannot unlock score or submission',()=>{
   const f=makeForm();f.inputs.a.value='1';f.inputs.b.value='999';f.dataset.winner='a';f.inputs.points.value='1';check(f);
   assert.ok(f.buttons.every(b=>!b.disabled));assert.equal(f.inputs.points.disabled,true);assert.equal(f.submit.disabled,true);
 });
-test('two-point draw button and matching score require a valid player pair',()=>{
-  const f=makeForm('two');check(f);assert.deepEqual(f.buttons.map(b=>b.disabled),[false,false,true]);
+test('two-point draw button is usable before players are chosen; score and submit require a valid pair',()=>{
+  const f=makeForm('two');check(f);assert.deepEqual(f.buttons.map(b=>b.disabled),[false,false,false]);
+  f.dataset.winner='draw';check(f);
+  assert.equal(f.inputs.result.disabled,true);assert.equal(f.submit.disabled,true);
   f.inputs.a.value='1';f.inputs.b.value='2';check(f);
-  assert.ok(f.buttons.every(b=>!b.disabled));assert.equal(f.inputs.result.disabled,true);
+  assert.ok(f.buttons.every(b=>!b.disabled));assert.equal(f.inputs.result.disabled,false);
+  f.dataset.winner='';check(f);assert.equal(f.inputs.result.disabled,true);
   f.dataset.winner='draw';check(f);assert.equal(f.inputs.result.disabled,false);assert.equal(f.submit.disabled,true);
   f.inputs.result.value='1-1';check(f);assert.equal(f.submit.disabled,false);
   f.inputs.result.value='2-0';check(f);assert.equal(f.submit.disabled,true);
 });
-test('draw button disabling, player-number sorting and yellow notice styling are present',()=>{
-  assert.match(src,/data-draw-button aria-pressed=.*pairReady\?'':'disabled'/);
+test('draw button stays active before player selection, and sorting and notice styles are present',()=>{
+  assert.doesNotMatch(src,/data-draw-button aria-pressed=.*pairReady\?'':'disabled'/);
   assert.match(src,/\.sort\(\(a,b\)=>a\.id-b\.id\)/);
   const css=readFileSync(new URL('../style.css',import.meta.url),'utf8');
   assert.match(css,/\.topbar \.tabs #notice\.show\s*\{\s*background:#ffe58c;/);

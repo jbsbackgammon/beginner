@@ -3,7 +3,7 @@ export const EVENTS = [
   { id: 'day1', label: '初級戦Day1', short: 'Day1', date: '2026-10-10', kind: 'points' },
   { id: 'day2', label: '初級戦Day2', short: 'Day2', date: '2026-10-11', kind: 'points' },
   { id: 'day3', label: '初級戦Day3', short: 'Day3', date: '2026-10-12', kind: 'points' },
-  { id: 'two', label: '2ポイントマッチラウンドロビン', short: '2pt RR', date: '2026-10-10', kind: 'two' },
+  { id: 'two', label: '2ptマッチラウンドロビン', short: '2pt RR', date: '2026-10-10', kind: 'two' },
   { id: 'cube', label: 'キューブ有ラウンドロビン', short: 'キューブ有RR', date: '2026-10-11', kind: 'cube' },
   { id: 'school', label: '小学生選手権', short: '小学生選手権', date: '', kind: 'points' },
 ];
@@ -120,7 +120,7 @@ export function createDemoEdition(random = Math.random) {
   const demo = {
     id: DEMO_EDITION_ID,
     name:'【テストデータ】 BACKGAMMON CLASSIC 2026',
-    players,matches,pendingPairings:[],waitingPlayers,
+    players,matches,waitingPlayers,
     rosterVisibleRows:30,
     dates:Object.fromEntries(EVENTS.map(e=>[e.id,e.date])),
     reservationWaitingVersion:1,
@@ -320,10 +320,7 @@ function storeWaiting(edition, eventId, ids) {
   edition.waitingPlayers[eventId]=[...new Set(ids)].sort((a,b)=>a-b);
 }
 
-/** All participants entered in this event who are not in the waiting list.
- * A player with an assigned match is no longer waiting, so they may be shown
- * in the picker (they remain unavailable for another pairing until finished).
- */
+/** Registered participants who are not currently waiting; there is no separate in-progress status. */
 export function availableWaitingPlayers(edition, eventId) {
   if (!eventById(eventId) || eventId==='overall') return [];
   const waiting=new Set(waitingPlayerIds(edition,eventId));
@@ -336,9 +333,6 @@ export function availableWaitingPlayers(edition, eventId) {
 export function addWaitingPlayer(edition, eventId, id) {
   if (!eventById(eventId) || eventId==='overall') return false;
   if (!availableWaitingPlayers(edition,eventId).some(p=>p.id===id)) return false;
-  // Re-adding a reserved player without cancelling the reservation creates a
-  // hidden "waiting" entry. The UI must cancel the reservation explicitly.
-  if (activePairings(edition,eventId).some(p=>p.a===id||p.b===id)) return false;
   const ids=waitingPlayerIds(edition,eventId);
   if (ids.includes(id)) return false;
   storeWaiting(edition,eventId,[...ids,id]);
@@ -359,47 +353,28 @@ export function returnPlayersToWaiting(edition, eventId, a, b) {
   storeWaiting(edition,eventId,[...waitingPlayerIds(edition,eventId),a,b]);
 }
 
-/** Reservations live separately from match results; older saved data has no such field. */
-export function activePairings(edition, eventId) {
-  return (edition.pendingPairings || []).filter(p=>p.event===eventId);
-}
-
-/** Reserve both players until a result is entered (or the reservation is cancelled).
- * Move them out of the waiting list, so both appear in the add picker.
+/** Confirm a proposed pairing by removing both people from the waiting list.
+ * No pending/in-progress record is created. Each can be added again separately.
  */
-export function reservePairing(edition, eventId, a, b) {
+export function arrangeWaitingPair(edition, eventId, a, b) {
   if (!unplayedPairs(edition,eventId).some(p=>p.a===Math.min(a,b)&&p.b===Math.max(a,b))) return false;
-  if (!Array.isArray(edition.pendingPairings)) edition.pendingPairings=[];
   storeWaiting(edition,eventId,waitingPlayerIds(edition,eventId).filter(id=>id!==a&&id!==b));
-  edition.pendingPairings.push({event:eventId,a:Math.min(a,b),b:Math.max(a,b)});
   return true;
 }
 
-export function cancelPairing(edition, eventId, a, b) {
-  const old=edition.pendingPairings||[];
-  edition.pendingPairings=old.filter(p=>!(p.event===eventId && ((p.a===a&&p.b===b)||(p.a===b&&p.b===a))));
-  if(old.length===edition.pendingPairings.length) return false;
-  storeWaiting(edition,eventId,[...waitingPlayerIds(edition,eventId),a,b]);
-  return true;
-}
-
-/** Upgrade older saved reservations, where assigned players were kept in the
- * waiting list and only hidden by the UI. Run once for each edition.
+/** Convert v47 and earlier saved data. Preserve completed results and the
+ * waiting-list state but discard the former in-progress reservation records.
  */
 export function migrateReservedWaiting(edition) {
-  if (edition.reservationWaitingVersion===1) return edition;
-  for(const event of EVENTS.filter(e=>e.id!=='overall')) {
-    const busy=new Set(activePairings(edition,event.id).flatMap(p=>[p.a,p.b]));
-    if(!busy.size) continue;
-    storeWaiting(edition,event.id,waitingPlayerIds(edition,event.id).filter(id=>!busy.has(id)));
+  if(edition.reservationWaitingVersion!==1 && Array.isArray(edition.pendingPairings)) {
+    for(const event of EVENTS.filter(e=>e.id!=='overall')) {
+      const pairedIds=new Set(edition.pendingPairings.filter(p=>p?.event===event.id).flatMap(p=>[p.a,p.b]));
+      if(pairedIds.size)storeWaiting(edition,event.id,waitingPlayerIds(edition,event.id).filter(id=>!pairedIds.has(id)));
+    }
   }
-  edition.reservationWaitingVersion=1;
+  delete edition.pendingPairings;
+  delete edition.reservationWaitingVersion;
   return edition;
-}
-
-/** A registered result frees the match's participants from any reserved pairing. */
-export function finishPairing(edition, eventId, a, b) {
-  edition.pendingPairings=(edition.pendingPairings||[]).filter(p=>p.event!==eventId || (![a,b].includes(p.a)&&![a,b].includes(p.b)));
 }
 
 /** List pairs of players who have both played in this event but have never met and are not busy. */
@@ -415,8 +390,7 @@ export function unplayedPairs(edition, eventId) {
     counts.set(m.b,(counts.get(m.b)||0)+1);
     played.add(key(m.a,m.b));
   }
-  const busy=new Set(activePairings(edition,eventId).flatMap(p=>[p.a,p.b]));
-  const ids=waitingPlayerIds(edition,eventId).filter(id=>!busy.has(id)),pairs=[];
+  const ids=waitingPlayerIds(edition,eventId),pairs=[];
   for (let i=0;i<ids.length;i++) for (let j=i+1;j<ids.length;j++) {
     const a=ids[i],b=ids[j];
     if (!played.has(key(a,b))) pairs.push({a,b,playedA:counts.get(a),playedB:counts.get(b)});

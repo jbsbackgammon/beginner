@@ -1,11 +1,11 @@
-import {EVENTS,eventById,validMatch,standings,entryCount,unplayedPairs,activePairings,reservePairing,cancelPairing,finishPairing,waitingPlayerIds,availableWaitingPlayers,addWaitingPlayer,removeWaitingPlayer,returnPlayersToWaiting,migrateReservedWaiting,canRegisterSelection,ensureMatchNumbers,nextMatchNumber,historySearchMatches,needsTournamentConfirmation,isEventEntrant,eligibleEventPlayers,createDemoEdition,DEMO_EDITION_ID} from './ranking.mjs';
+import {EVENTS,eventById,validMatch,standings,entryCount,unplayedPairs,arrangeWaitingPair,waitingPlayerIds,availableWaitingPlayers,addWaitingPlayer,removeWaitingPlayer,returnPlayersToWaiting,migrateReservedWaiting,canRegisterSelection,ensureMatchNumbers,nextMatchNumber,historySearchMatches,needsTournamentConfirmation,isEventEntrant,eligibleEventPlayers,createDemoEdition,DEMO_EDITION_ID} from './ranking.mjs';
 const KEY='jbs-beginner-v1';
 const eventIds=EVENTS.filter(e=>e.id!=='overall').map(e=>e.id);
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const DEFAULT_EDITION_NAME='BACKGAMMON CLASSIC 2026';
 const DEFAULT_VENUE='ワイヤーズホテル品川シーサイド';
-const initial=()=>({schema:1,activeEditionId:'classic-2026',editions:[{id:'classic-2026',name:DEFAULT_EDITION_NAME,venue:DEFAULT_VENUE,players:[],matches:[],pendingPairings:[],dates:Object.fromEntries(EVENTS.map(e=>[e.id,e.date]))}]});
+const initial=()=>({schema:1,activeEditionId:'classic-2026',editions:[{id:'classic-2026',name:DEFAULT_EDITION_NAME,venue:DEFAULT_VENUE,players:[],matches:[],dates:Object.fromEntries(EVENTS.map(e=>[e.id,e.date]))}]});
 let data;try{data=JSON.parse(localStorage.getItem(KEY)||'null')}catch{data=null}
 if(!data || data.schema!==1 || !Array.isArray(data.editions))data=initial();
 for(const edition of data.editions){
@@ -22,7 +22,7 @@ const ed=()=>data.editions.find(e=>e.id===data.activeEditionId)||data.editions[0
 const evLabel=(id)=>eventById(id)?.label||id;
 const summaryId=(id)=>`${id}`;
 const player=(id)=>ed().players.find(x=>x.id===id);
-const playerLabel=id=>{const p=player(id);return p?`#${p.id} ${p.name}`:`#${id}（未登録）`};
+const playerLabel=id=>{const p=player(id);return p?`${p.name} #${p.id}`:`（未登録）#${id}`};
 const formatRate=n=>`${(n*100).toFixed(1)}%`;
 const dayName=id=>({'day1':'Day1','day2':'Day2','day3':'Day3'}[id]||id);
 // The three symbols identify the event days, not three separate ranking positions.
@@ -37,7 +37,7 @@ function adoptedDayIcons(row){
   if(!entered)return `<span class="adopted-day is-not-entered" aria-hidden="true"></span>`;
   return `<span class="adopted-day ${adopted.has(day)?'is-adopted':'is-not-adopted'}" title="${esc(dayName(day))}${adopted.has(day)?'（採用）':'（不採用）'}" aria-label="${esc(dayName(day))}${adopted.has(day)?'採用':'不採用'}">${symbols[day]}</span>`;
  }).join('');
- return `<span class="adopted-days" aria-label="採用Day">${content}</span>`;
+ return `<span class="adopted-days" aria-label="Day">${content}</span>`;
 }
 function pdfEditionTitle(){
  // Use the entered tournament name unchanged in both PDF exports.
@@ -55,7 +55,7 @@ function save(){try{localStorage.setItem(KEY,JSON.stringify(data))}catch(e){aler
 let noticeTimeout=null;
 function notice(msg){const n=$('notice');if(!n)return;clearTimeout(noticeTimeout);n.textContent=msg;n.title=msg;n.classList.add('show');noticeTimeout=setTimeout(()=>{n.classList.remove('show');n.textContent='';n.removeAttribute('title');},4000)}
 function eventSelect(selected,overall=false,id='event-picker'){return `<select id="${id}">${EVENTS.filter(e=>overall||e.id!=='overall').map(e=>`<option value="${e.id}" ${e.id===selected?'selected':''}>${esc(e.label)}</option>`).join('')}</select>`}
-function playerOptions(selected=null,excluded=null){return `<option value="">選手を選択</option>`+eligibleEventPlayers(ed(),activeEvent).filter(p=>p.id!==excluded).sort((a,b)=>a.id-b.id).map(p=>`<option value="${p.id}" ${p.id===selected?'selected':''}>${esc(`#${p.id} ${p.name}`)}</option>`).join('')}
+function playerOptions(selected=null,excluded=null){return `<option value="">選手を選択</option>`+eligibleEventPlayers(ed(),activeEvent).filter(p=>p.id!==excluded).sort((a,b)=>a.id-b.id).map(p=>`<option value="${p.id}" ${p.id===selected?'selected':''}>${esc(`${p.name} #${p.id}`)}</option>`).join('')}
 function renderEditionPicker(){const box=$('edition-picker');if(box)box.innerHTML=data.editions.map(e=>`<option value="${esc(e.id)}" ${e.id===ed()?.id?'selected':''}>${esc(e.name)}</option>`).join('')}
 function renderHeaderEvent(){
  const box=document.querySelector('.header-event'),select=$('header-event');
@@ -97,13 +97,11 @@ function historyTable(matches) {
 }
 
 function pairingTable(pairs){
- const busy=activePairings(ed(),activeEvent);
  const groups=new Map();
- const busyIds=new Set(busy.flatMap(p=>[p.a,p.b]));
- for(const id of waitingPlayerIds(ed(),activeEvent).filter(id=>!busyIds.has(id)))groups.set(id,[]);
+ for(const id of waitingPlayerIds(ed(),activeEvent))groups.set(id,[]);
  for(const pair of pairs){groups.get(pair.a)?.push(pair.b);groups.get(pair.b)?.push(pair.a)}
  const filtered=[...groups];
- const list=filtered.length?`<table class="data-table pairing-list"><thead><tr><th>対戦待ち</th><th>未対戦相手</th><th aria-label="操作"></th></tr></thead><tbody>${filtered.map(([id,opps])=>`<tr><td class="pairing-name">${esc(playerLabel(id))}</td><td class="pairing-opponents"><div class="opponents">${opps.length?opps.sort((a,b)=>a-b).map(n=>`<button type="button" class="opponent-no" data-action="pick-pair" data-a="${id}" data-b="${n}" title="${esc(player(n)?.name||playerLabel(n))}" aria-label="${esc(playerLabel(n))}と対戦を組む">${n}</button>`).join(''):'<span class="muted">ー</span>'}</div></td><td class="pairing-actions"><button type="button" class="btn small pairing-remove" data-action="remove-waiting" data-id="${id}" aria-label="${esc(playerLabel(id))}を対戦待ちから削除">削除</button></td></tr>`).join('')}</tbody></table>`:`<div class="empty">${busy.length?'対戦待ちの選手がいません':'対戦待ちの選手がいません'}</div>`;
+ const list=filtered.length?`<table class="data-table pairing-list"><thead><tr><th>対戦待ち</th><th>未対戦相手</th><th aria-label="操作"></th></tr></thead><tbody>${filtered.map(([id,opps])=>`<tr><td class="pairing-name">${esc(playerLabel(id))}</td><td class="pairing-opponents"><div class="opponents">${opps.length?opps.sort((a,b)=>a-b).map(n=>`<button type="button" class="opponent-no" data-action="pick-pair" data-a="${id}" data-b="${n}" title="${esc(player(n)?.name||playerLabel(n))}" aria-label="${esc(playerLabel(n))}と対戦を組む">${n}</button>`).join(''):'<span class="muted">ー</span>'}</div></td><td class="pairing-actions"><button type="button" class="btn small pairing-remove" data-action="remove-waiting" data-id="${id}" aria-label="${esc(playerLabel(id))}を対戦待ちから削除">削除</button></td></tr>`).join('')}</tbody></table>`:`<div class="empty">対戦待ちの選手がいません</div>`;
  return list;
 }
 function matchPlayerField(side,id,label,winningSide,pairReady,otherId){
@@ -121,7 +119,7 @@ function renderEntry(){
  const pointsLabel=e.kind==='points'?{1:'1-0 シングル勝ち',2:'2-0 ギャモン勝ち',3:'3-0 バックギャモン勝ち'}:Object.fromEntries(pts.map(n=>[n,`${n}-0`]));
  const resultControl=e.kind==='two'?`<label class="field result-score"><select name="result" aria-label="得点" required disabled><option value="">得点を選択</option>${['2-0','2-1','1-1','1-2','0-2'].map(x=>`<option value="${x}" ${twoScore===x?'selected':''}>${x}</option>`).join('')}</select></label>`:`<label class="field result-score"><select name="points" aria-label="得点" required disabled><option value="">得点を選択</option>${pts.map(n=>`<option value="${n}" ${current&&Math.max(current.sa,current.sb)===n?'selected':''}>${pointsLabel[n]}</option>`).join('')}</select></label>`;
  const addable=availableWaitingPlayers(ed(),activeEvent);
- const addControl=`<div class="pairing-add"><select id="pair-add-player" aria-label="対戦待ちに追加する選手番号" ${addable.length?'':'disabled'}><option value="">選手選択</option>${addable.map(p=>`<option value="${p.id}">${esc(`#${p.id} ${p.name}`)}</option>`).join('')}</select><button type="button" class="btn small" data-action="add-waiting" ${addable.length?'':'disabled'}>追加</button></div>`;
+ const addControl=`<div class="pairing-add"><select id="pair-add-player" aria-label="対戦待ちに追加する選手番号" ${addable.length?'':'disabled'}><option value="">選手選択</option>${addable.map(p=>`<option value="${p.id}">${esc(`${p.name} #${p.id}`)}</option>`).join('')}</select><button type="button" class="btn small" data-action="add-waiting" ${addable.length?'':'disabled'}>追加</button></div>`;
  const pairs=unplayedPairs(ed(),activeEvent);
  const middle=e.kind==='two'
    ? `<div class="vs match-versus two-controls"><span class="versus-label">VS</span><button type="button" class="draw-button" data-draw-button aria-pressed="false" ${pairReady?'':'disabled'}>引分</button></div>`
@@ -194,22 +192,22 @@ function syncMatchPlayer(el){
 function statsTable(eventId,preview=false){
  const rows=standings(ed(),eventId),isTwo=eventId==='two',overall=eventId==='overall';
  if(!rows.length)return '<div class="empty">表示できる成績がありません</div>';
- const headers=['順位','選手',isTwo?'③試合':'試合','勝','負',...(isTwo?['引分']:[]),isTwo?'①勝越':'②勝越',isTwo?'②勝率':'③勝率',...(!isTwo?['得点','失点','①得失点差']:[]),...(overall?['採用Day']:[])];
+ const headers=['順位','選手',isTwo?'③試合':'試合','勝','負',...(isTwo?['引分']:[]),isTwo?'①勝越':'②勝越',isTwo?'②勝率':'③勝率',...(!isTwo?['得点','失点','①得失点差']:[]),...(overall?['Day']:[])];
  const displayHeader=h=>{const m=/^([①②③])(.+)$/.exec(h);return m?`<span class="rank-header-label">${esc(m[2])}</span><small class="rank-header-order">ー ${'①②③'.indexOf(m[1])+1} ー</small>`:esc(h);};
  const td=(label,value,cls='')=>`<td data-label="${label}"${cls?` class="${cls}"`:''}>${value}</td>`;
  const html=rows.map(r=>{
   const cells=[
-   td('順位',`<strong>${r.rank}</strong>`,'standings-rank'),td('選手',esc(`#${r.id} ${r.name}`),'player-name'),td(isTwo?'③試合':'試合',r.matches),td('勝',r.wins),td('負',r.losses),
+   td('順位',`<strong>${r.rank}</strong>`,'standings-rank'),td('選手',esc(`${r.name} #${r.id}`),'player-name'),td(isTwo?'③試合':'試合',r.matches),td('勝',r.wins),td('負',r.losses),
    ...(isTwo?[td('引分',r.draws)]:[]),td('勝越',`${r.spread>0?'+':''}${r.spread}`,r.spread>=0?'pos':'neg'),td('勝率',formatRate(r.rate)),
    ...(!isTwo?[td('得点',r.scored),td('失点',r.conceded),td('得失点',`${r.diff>0?'+':''}${r.diff}`,r.diff>=0?'pos':'neg')]:[]),
-   ...(overall?[td('採用Day',adoptedDayIcons(r),'adopted-days-cell')]:[])
+   ...(overall?[td('Day',adoptedDayIcons(r),'adopted-days-cell')]:[])
   ];
   return `<tr class="${r.rank<=3?'podium':''}">${cells.join('')}</tr>`;
  });
- // All columns after "順位" share one width. "順位" is exactly half
- // of that width, regardless of the event's differing column count.
- const unitWidth=100/(headers.length-0.5);
- const colWidths=`<colgroup><col style="width:${(unitWidth/2).toFixed(5)}%">${headers.slice(1).map(()=>`<col style="width:${unitWidth.toFixed(5)}%">`).join('')}</colgroup>`;
+ // Only the player column is wider: 1.5 units, rank is half a unit,
+ // and every statistics column remains one unit. Total width stays 100%.
+ const unitWidth=100/headers.length;
+ const colWidths=`<colgroup><col style="width:${(unitWidth/2).toFixed(5)}%"><col style="width:${(unitWidth*1.5).toFixed(5)}%">${headers.slice(2).map(()=>`<col style="width:${unitWidth.toFixed(5)}%">`).join('')}</colgroup>`;
  return `<div class="table-scroll"><table class="data-table standings-table">${colWidths}<thead><tr>${headers.map(x=>`<th>${displayHeader(x)}</th>`).join('')}</tr></thead><tbody>${html.join('')}</tbody></table></div>`;
 }
 function rosterNumbers(e){
@@ -240,8 +238,8 @@ function rosterNameChange(input){
  const tr=input.closest('[data-roster-id]'),id=Number(tr.dataset.rosterId);
  const name=input.value.trim(),p=player(id);
  if(!name){
-  if(p && (ed().matches.some(m=>m.a===id||m.b===id) || (ed().pendingPairings||[]).some(q=>q.a===id||q.b===id))){
-   alert('この選手には試合記録または対戦中の割当があります。名前を空欄にはできません。');
+  if(p && ed().matches.some(m=>m.a===id||m.b===id)){
+   alert('この選手には試合記録があります。名前を空欄にはできません。');
    input.value=p.name;rosterRowState(tr);return;
   }
   if(p){
@@ -278,10 +276,10 @@ function rosterEventChange(button){
 
 function reportHTML(id){
  const e=eventById(id),rows=standings(ed(),id),date=id==='overall'?dateFor('day3'):dateFor(id),isTwo=id==='two',overall=id==='overall';
- const headers=['順位','選手',isTwo?'③試合':'試合','勝','負',...(isTwo?['引']:[]),isTwo?'①勝越':'②勝越',isTwo?'②勝率':'③勝率',...(!isTwo?['得点','失点','①得失点差']:[]),...(overall?['採用Day']:[])];
+ const headers=['順位','選手',isTwo?'③試合':'試合','勝','負',...(isTwo?['引']:[]),isTwo?'①勝越':'②勝越',isTwo?'②勝率':'③勝率',...(!isTwo?['得点','失点','①得失点差']:[]),...(overall?['Day']:[])];
  const displayHeader=h=>{const m=/^([①②③])(.+)$/.exec(h);return m?`<span class="rank-header-label">${esc(m[2])}</span><small class="rank-header-order">ー ${'①②③'.indexOf(m[1])+1} ー</small>`:esc(h);};
  const tr=rows.map(r=>{
-  const vals=[r.rank,esc(`#${r.id} ${r.name}`),r.matches,r.wins,r.losses,...(isTwo?[r.draws]:[]),`${r.spread>0?'+':''}${r.spread}`,formatRate(r.rate),...(!isTwo?[r.scored,r.conceded,`${r.diff>0?'+':''}${r.diff}`]:[]),...(overall?[adoptedDayIcons(r)]:[])];
+  const vals=[r.rank,esc(`${r.name} #${r.id}`),r.matches,r.wins,r.losses,...(isTwo?[r.draws]:[]),`${r.spread>0?'+':''}${r.spread}`,formatRate(r.rate),...(!isTwo?[r.scored,r.conceded,`${r.diff>0?'+':''}${r.diff}`]:[]),...(overall?[adoptedDayIcons(r)]:[])];
   return `<tr>${vals.map((v,i)=>`<td data-label="${headers[i]}"${i===0?' class="standings-rank"':''}>${v}</td>`).join('')}</tr>`;
  }).join('');
  // The event's statistical columns (from 試合 to the last field) share one width.
@@ -393,25 +391,16 @@ function matchSave(form){const f=new FormData(form),a=Number(f.get('a_no')||f.ge
  const repeated=ed().matches.some(x=>x.id!==m.id&&x.event===m.event&&((x.a===a&&x.b===b)||(x.a===b&&x.b===a)));
  if(repeated&&!confirm('この2名は既にこの大会で対戦しています。重複対戦として登録しますか？'))return;
  if(editingMatch){const i=ed().matches.findIndex(x=>x.id===editingMatch);if(i<0)return;m.matchNo=ed().matches[i].matchNo;ed().matches[i]=m;}else{m.matchNo=nextMatchNumber(ed(),activeEvent);ed().matches.push(m);ed().lastResultRegisteredAt=Date.now();}
- finishPairing(ed(),activeEvent,a,b);
  returnPlayersToWaiting(ed(),activeEvent,a,b);
  editingMatch=null;preselectedPair=null;save();render();notice('試合結果を保存しました。');
 }
 
-function asCSV(id){const isTwo=id==='two',overall=id==='overall';let h=['順位','氏名','選手No.','試合','勝','負'];if(isTwo)h.push('引分');h.push('勝越','勝率');if(!isTwo)h.push('得点','失点','得失点');if(overall)h.push('採用Day');
+function asCSV(id){const isTwo=id==='two',overall=id==='overall';let h=['順位','氏名','選手No.','試合','勝','負'];if(isTwo)h.push('引分');h.push('勝越','勝率');if(!isTwo)h.push('得点','失点','得失点');if(overall)h.push('Day');
  const lines=[h,...standings(ed(),id).map(r=>{const a=[r.rank,r.name,r.id,r.matches,r.wins,r.losses];if(isTwo)a.push(r.draws);a.push(r.spread,formatRate(r.rate));if(!isTwo)a.push(r.scored,r.conceded,r.diff);if(overall)a.push(r.selectedDays.map(dayName).join('+'));return a})];
  const safe=s=>{const t=String(s??'');return '"'+(typeof s==='string'&&/^[=+\-@\t\r]/.test(t)?"'":'')+t.replaceAll('"','""')+'"'};return '\ufeff'+lines.map(a=>a.map(safe).join(',')).join('\r\n')}
 function download(name,content,type){const blob=new Blob([content],{type}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)}
 function timestamp(){const d=new Date(),pad=x=>String(x).padStart(2,'0');return `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`}
-function normalizeImport(x){if(!x||x.schema!==1||!Array.isArray(x.editions))throw Error('対応するJSON形式ではありません。');const ids=new Set();for(const e of x.editions){if(typeof e.id!=='string'||typeof e.name!=='string'||ids.has(e.id)||!Array.isArray(e.players)||!Array.isArray(e.matches))throw Error('大会データが不正です。');ids.add(e.id);const pids=new Set();for(const p of e.players){if(!Number.isInteger(p.id)||pids.has(p.id)||!String(p.name||'').trim())throw Error('選手マスタに重複・不正値があります。');pids.add(p.id)}const mids=new Set();for(const m of e.matches){if(typeof m.id!=='string'||mids.has(m.id))throw Error('試合IDの重複があります。');mids.add(m.id);const issue=validMatch(m,pids);if(issue)throw Error(`${e.name}: ${issue}`)}e.pendingPairings=Array.isArray(e.pendingPairings)?e.pendingPairings:[];
- const busyByEvent=new Map();
- for(const q of e.pendingPairings){
-  if(!q||!eventIds.includes(q.event)||!Number.isInteger(q.a)||!Number.isInteger(q.b)||q.a===q.b||!pids.has(q.a)||!pids.has(q.b))throw Error('対戦中の割当データが不正です。');
-  const used=busyByEvent.get(q.event)||new Set();
-  if(used.has(q.a)||used.has(q.b))throw Error('同じ選手の対戦中割当が重複しています。');
-  used.add(q.a);used.add(q.b);busyByEvent.set(q.event,used);
- }
- if(e.waitingPlayers!==undefined){
+function normalizeImport(x){if(!x||x.schema!==1||!Array.isArray(x.editions))throw Error('対応するJSON形式ではありません。');const ids=new Set();for(const e of x.editions){if(typeof e.id!=='string'||typeof e.name!=='string'||ids.has(e.id)||!Array.isArray(e.players)||!Array.isArray(e.matches))throw Error('大会データが不正です。');ids.add(e.id);const pids=new Set();for(const p of e.players){if(!Number.isInteger(p.id)||pids.has(p.id)||!String(p.name||'').trim())throw Error('選手マスタに重複・不正値があります。');pids.add(p.id)}const mids=new Set();for(const m of e.matches){if(typeof m.id!=='string'||mids.has(m.id))throw Error('試合IDの重複があります。');mids.add(m.id);const issue=validMatch(m,pids);if(issue)throw Error(`${e.name}: ${issue}`)} if(e.waitingPlayers!==undefined){
   if(!e.waitingPlayers||typeof e.waitingPlayers!=='object'||Array.isArray(e.waitingPlayers))throw Error('対戦待ちデータが不正です。');
   for(const [key,list] of Object.entries(e.waitingPlayers)){
    if(!eventIds.includes(key)||!Array.isArray(list)||list.some(id=>!Number.isInteger(id)||!pids.has(id))||new Set(list).size!==list.length)throw Error('対戦待ちに無効な選手番号があります。');
@@ -441,7 +430,7 @@ function toggleTestData(){
  tab='players';activeEvent='day1';historySearch='';editingMatch=null;preselectedPair=null;
  save();render();notice('テストデータ：選手30名・各大会300件（全1,800件）の試合結果を生成しました。');
 }
-function newEdition(){const name=prompt('新しい大会データの名称','BACKGAMMON CLASSIC 2027');if(!name?.trim())return;const id='edition-'+Date.now();data.editions.push({id,name:name.trim(),players:[],matches:[],pendingPairings:[],dates:{}});data.activeEditionId=id;activeEvent='day1';$('header-event').value='day1';save();render();notice('大会データを作成しました。')}
+function newEdition(){const name=prompt('新しい大会データの名称','BACKGAMMON CLASSIC 2027');if(!name?.trim())return;const id='edition-'+Date.now();data.editions.push({id,name:name.trim(),players:[],matches:[],dates:{}});data.activeEditionId=id;activeEvent='day1';$('header-event').value='day1';save();render();notice('大会データを作成しました。')}
 function onAction(action,id){switch(action){
  case 'add-roster-row':{
   const visible=rosterNumbers(ed());
@@ -455,14 +444,6 @@ function onAction(action,id){switch(action){
  case 'add-waiting':{
   const id=Number($('pair-add-player')?.value);
   if(!id){notice('追加する選手番号を選んでください。');return}
-  const reserved=activePairings(ed(),activeEvent).find(q=>q.a===id||q.b===id);
-  if(reserved){
-   const opponent=reserved.a===id?reserved.b:reserved.a;
-   if(!confirm(`${playerLabel(id)} は ${playerLabel(opponent)} と対戦中です。対戦斡旋を解除して、両選手を対戦待ちに戻しますか？`))return;
-   if(!cancelPairing(ed(),activeEvent,reserved.a,reserved.b))return;
-   if(preselectedPair && [reserved.a,reserved.b].includes(preselectedPair.a) && [reserved.a,reserved.b].includes(preselectedPair.b))preselectedPair=null;
-   save();render();notice(`${playerLabel(id)} を対戦待ちに追加しました。`);break;
-  }
   if(!addWaitingPlayer(ed(),activeEvent,id)){notice('この選手は対戦待ちに追加できません。');return}
   save();render();notice(`${playerLabel(id)} を対戦待ちに追加しました。`);break
  }
@@ -499,17 +480,8 @@ $('app').addEventListener('click',e=>{const rosterToggle=e.target.closest('[data
  const a=Number(b.dataset.a),c=Number(b.dataset.b);
  if(!unplayedPairs(ed(),activeEvent).some(p=>p.a===Math.min(a,c)&&p.b===Math.max(a,c))){notice('この組み合わせは斡旋できません。');render();return}
  if(!confirm(`${playerLabel(a)} と ${playerLabel(c)} の対戦を組みますか？`))return;
- if(!reservePairing(ed(),activeEvent,a,c)){notice('この組み合わせは既に斡旋されています。');render();return}
+ if(!arrangeWaitingPair(ed(),activeEvent,a,c)){notice('この組み合わせは斡旋できません。');render();return}
  preselectedPair={a,b:c};editingMatch=null;save();render();notice('対戦を組みました。');$('match-form')?.scrollIntoView({behavior:'smooth',block:'nearest'});return
- }
- if(b.dataset.action==='cancel-pair'){
- const a=Number(b.dataset.a),c=Number(b.dataset.b);
- if(!confirm(`${playerLabel(a)} と ${playerLabel(c)} の対戦斡旋を取り消しますか？`))return;
- if(cancelPairing(ed(),activeEvent,a,c)){
-  if(preselectedPair?.a===a&&preselectedPair?.b===c)preselectedPair=null;
-  save();render();notice('対戦斡旋を取り消しました。');
- }
- return
  }
  onAction(b.dataset.action,b.dataset.id)});
 $('app').addEventListener('input',e=>{if(e.target.id==='history-filter'){historySearch=e.target.value;$('history-results').innerHTML=historyTable(resultsFor(activeEvent))}else if(e.target.matches('input[data-match-side]')){syncMatchPlayer(e.target)}else if(e.target.matches('[data-roster-name]')){rosterRowState(e.target.closest('[data-roster-id]'))}});

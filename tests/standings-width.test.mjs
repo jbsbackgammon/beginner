@@ -11,7 +11,7 @@ const statsTable=runInNewContext(`${fnSource}\nstatsTable`,{
  standings:()=>[row],ed:()=>({}),esc:s=>String(s),formatRate:n=>String(n),adoptedDayIcons:()=>'<span class="adopted-days">①②③</span>',
 });
 for(const event of ['overall','day1','two','cube','school']){
- test(`the ${event} ranking uses one equal-width unit for all data columns and half for rank`,()=>{
+ test(`the ${event} ranking widens only the player column; rank is half width`,()=>{
    const html=statsTable(event);
    const cols=html.match(/<colgroup>(.*?)<\/colgroup>/)?.[1];
    assert.ok(cols,'colgroup must exist');
@@ -20,6 +20,7 @@ for(const event of ['overall','day1','two','cube','school']){
    assert.equal(widths.length,headers);
    assert.ok(widths.length>2);
    assert.ok(Math.abs(widths.reduce((a,b)=>a+b,0)-100)<0.002);
-   for(const w of widths.slice(1))assert.ok(Math.abs(w-2*widths[0])<0.0001);
+   assert.ok(Math.abs(widths[1]-3*widths[0])<0.0001);
+   for(const w of widths.slice(2))assert.ok(Math.abs(w-2*widths[0])<0.0001);
  });
 }

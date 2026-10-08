@@ -1389,3 +1389,48 @@ html{scroll-padding-top:100px}
     margin-top:.85mm;
   }
 }
+
+
+/* v48: Sticky-header grids must retain their bottom rule while scrolling.
+   Chromium detaches collapsed table borders from sticky cells; separate
+   borders keep the line inside the painted header rather than the scrolled row. */
+@media screen {
+  #app .data-table {
+    border-collapse:separate!important;
+    border-spacing:0!important;
+  }
+  #app .data-table thead th {
+    position:sticky!important;
+    top:0;
+    z-index:20!important;
+    background:#edf3ef!important;
+    border-bottom:1px solid #9eb3a9!important;
+    box-shadow:inset 0 -2px 0 #9eb3a9, 0 1px 0 #9eb3a9!important;
+    background-clip:border-box;
+  }
+  #app .data-table thead th::after {
+    bottom:0;
+    height:2px;
+    background:#9eb3a9;
+  }
+}
+
+/* v48: Prevent the "次の10行を追加" footer's 1px cell borders from
+   stacking with the last player row's bottom rule and the table's perimeter.
+   The final player row provides the top divider; the table frame supplies
+   the footer's left, right and bottom borders. */
+@media screen {
+  #app .roster-matrix tfoot td {
+    border:0!important;
+  }
+}
+
+/* v48: Tighten the pairing title/table space, without affecting other panels. */
+@media screen {
+  #app .entry-pairings > .pairing-title {
+    margin-bottom:6px!important;
+  }
+  #app .entry-pairings > #pair-results.pairing-scroll {
+    margin-top:0!important;
+  }
+}

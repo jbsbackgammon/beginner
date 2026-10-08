@@ -226,3 +226,52 @@ html{scroll-padding-top:100px}
 .pending-pair{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:6px 0;border-bottom:1px solid #edf1ee;font-size:12px}
 .pending-pair>span{overflow-wrap:anywhere}
 .opponent-no:focus-visible{outline:2px solid #075b4a;outline-offset:2px}
+
+
+/* v14: balanced progression panels, compact participants, matched scoring controls. */
+.entry-grid{
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+}
+.entry-form .scoreline{
+  grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:10px;
+}
+.entry-form .winner-button{margin-top:9px}
+.entry-form .result-row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;align-items:end}
+.entry-form .result-row .result-score{width:100%;min-width:0}
+.entry-form .result-row .result-score select{width:100%}
+.entry-form .result-row button[type=submit]{width:100%;min-width:0;height:41px;padding-inline:5px;white-space:nowrap}
+/* Two participant columns always receive identical widths. */
+.history-table{table-layout:fixed;min-width:470px}
+.history-table col.history-col-player{width:31%}
+.history-table col.history-col-score{width:14%}
+.history-table col.history-col-actions{width:24%}
+.history-table td.history-name{white-space:normal;overflow-wrap:anywhere}
+@media(max-width:850px){
+  .entry-grid{grid-template-columns:minmax(0,1fr)}
+}
+
+/* v14: centered VS between the two participant input groups. */
+.entry-form .scoreline{
+  grid-template-columns:minmax(0,1fr) 24px minmax(0,1fr);
+  gap:6px;
+}
+.entry-form .match-versus{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  height:42px;
+  padding:0;
+  align-self:start;
+  white-space:nowrap;
+  font-size:12px;
+  font-weight:800;
+  color:#82968b;
+}
+@media(max-width:410px){
+  .entry-form .scoreline{
+    grid-template-columns:minmax(0,1fr) 21px minmax(0,1fr);
+    gap:4px;
+  }
+  .entry-form .match-versus{font-size:11px}
+}

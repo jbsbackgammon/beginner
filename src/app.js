@@ -287,7 +287,10 @@ function reportHTML(id){
  const columnCount=headers.length-2;
  const dataWidth=69/columnCount;
  const columnWidths=`<colgroup><col style="width:7%"><col style="width:24%">${Array.from({length:columnCount},()=>`<col style="width:${dataWidth.toFixed(6)}%">`).join('')}</colgroup>`;
- return `<div class="report">${pdfHeading(id,rows.length)}<table class="report-data-table">${columnWidths}<thead><tr>${headers.map(h=>`<th>${displayHeader(h)}</th>`).join('')}</tr></thead><tbody>${tr||`<tr><td colspan="${headers.length}">成績データなし</td></tr>`}</tbody></table></div>`;
+ // Keep the two-line tournament title, its divider, and the column labels
+ // together in THEAD. Browsers repeat table-header-group on every printed page.
+ const repeatHeading=`<tr class="report-title-row"><th class="report-heading-cell" colspan="${headers.length}">${pdfHeading(id,rows.length)}</th></tr>`;
+ return `<div class="report"><table class="report-data-table">${columnWidths}<thead>${repeatHeading}<tr class="report-column-row">${headers.map(h=>`<th>${displayHeader(h)}</th>`).join('')}</tr></thead><tbody>${tr||`<tr><td colspan="${headers.length}">成績データなし</td></tr>`}</tbody></table></div>`;
 }
 // A4 portrait: two columns by four rows, eight individual results per sheet.
 // Within an event the circles follow their original match number, oldest first.

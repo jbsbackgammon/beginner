@@ -30,9 +30,9 @@ test('PDF uses number-sorted cards, prominent rank, separated dates and associat
  const html=fn.personalReportHTML('day1');
  assert.match(html,/BACKGAMMON CLASSIC 2026/);
  assert.match(html,/初級戦Day1　個人成績 #\d+/);
- assert.match(html,/class="personal-rank">優勝<\/div>/);
- assert.doesNotMatch(html,/class="personal-rank">第1位<\/div>/);
- assert.match(html,/class="personal-rank">第2位<\/div>/);
+ assert.match(html,/class="personal-rank"><span class="personal-rank-label">優勝<span class="personal-rank-total">\/\d+名<\/span><\/span><\/div>/);
+ assert.doesNotMatch(html,/class="personal-rank-label">第1位/);
+ assert.match(html,/class="personal-rank-label">第2位<span class="personal-rank-total">\/\d+名<\/span>/);
  assert.match(html,/勝越-?\d+　勝率\d+\.\d%/);
  assert.match(html,/得点\d+　失点-\d+　得失点差-?\d+/);
  assert.match(html,/2026-10-10　ワイヤーズホテル品川シーサイド/);
@@ -79,4 +79,15 @@ test('every personal match row uses the same ten-slot left-aligned grid',()=>{
 
 test('the individual PDF rank is at least 28pt while summary text stays regular weight',()=>{
  assert.match(style,/#print-area \.personal-card \.personal-rank \{\s*font-size:28pt!important/);
+});
+
+test('personal PDF count uses the number of ranked players and does not change rank centering',()=>{
+ const html=fn.personalReportHTML('day1');
+ const participantCount=standings(demo,'day1').length;
+ const totals=[...html.matchAll(/class="personal-rank-total">\/(\d+)名<\/span>/g)];
+ assert.equal(totals.length,participantCount);
+ assert.ok(totals.every(m=>Number(m[1])===participantCount));
+ assert.match(style,/#print-area \.personal-card \.personal-rank-label \{\s*position:relative;\s*display:inline-block;/);
+ assert.match(style,/#print-area \.personal-card \.personal-rank-total \{\s*position:absolute;\s*left:100%;\s*bottom:0;/);
+ assert.match(style,/#print-area \.personal-card \.personal-rank-total \{[^}]*font-size:11pt!important;/);
 });

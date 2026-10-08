@@ -1514,3 +1514,26 @@ html{scroll-padding-top:100px}
     outline-offset:2px;
   }
 }
+
+
+/* v53: centre the ranking word itself.  The number of ranked players is
+   positioned immediately after the word, outside the centred width, with
+   both text boxes aligned at the bottom.  The added suffix never shifts the
+   horizontal centre of 優勝 or 第n位. */
+@media print {
+  #print-area .personal-card .personal-rank-label {
+    position:relative;
+    display:inline-block;
+    white-space:nowrap;
+  }
+  #print-area .personal-card .personal-rank-total {
+    position:absolute;
+    left:100%;
+    bottom:0;
+    margin-left:.7mm;
+    font-size:11pt!important;
+    font-weight:400!important;
+    line-height:1!important;
+    white-space:nowrap;
+  }
+}

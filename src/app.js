@@ -347,7 +347,7 @@ function personalReportHTML(id){
   return `<article class="personal-card">
    <div class="personal-event-title">${esc(pdfEditionTitle())}</div>
    <div class="personal-event-detail">${esc(label)}　個人成績 #${r.id}</div>
-   <div class="personal-rank">${r.rank===1?'優勝':`第${r.rank}位`}</div>
+   <div class="personal-rank"><span class="personal-rank-label">${r.rank===1?'優勝':`第${r.rank}位`}<span class="personal-rank-total">/${rows.length}名</span></span></div>
    <div class="personal-summary">${r.matches}試合　${r.wins}勝${r.losses}敗${two?` ${r.draws}引分`:''}　勝越${r.spread}　勝率${formatRate(r.rate)}</div>
    <div class="personal-score-totals">得点${scored}　失点${conceded}　得失点差${diff}</div>
    ${personalResultDots(id,r)}

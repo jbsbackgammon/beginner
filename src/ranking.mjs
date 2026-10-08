@@ -273,7 +273,9 @@ export function standings(edition,eventId) {
     if (!a||!b) continue;
     a.matches++; b.matches++;
     if(m.sa>m.sb){a.wins++;b.losses++} else if(m.sa<m.sb){b.wins++;a.losses++} else {a.draws++;b.draws++}
-    if(ev.kind!=='two') {a.scored+=m.sa;a.conceded-=m.sb;b.scored+=m.sb;b.conceded-=m.sa}
+    // Keep point totals for every event, including 2pt RR. The latter still
+    // ranks solely by win margin, decisive win rate and matches played.
+    a.scored+=m.sa;a.conceded-=m.sb;b.scored+=m.sb;b.conceded-=m.sa;
   }
   for(const row of byId.values()) {
     row.diff=row.scored+row.conceded;

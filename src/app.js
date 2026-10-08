@@ -208,14 +208,14 @@ function syncMatchPlayer(el){
 function statsTable(eventId,preview=false){
  const rows=standings(ed(),eventId),isTwo=eventId==='two',overall=eventId==='overall';
  if(!rows.length)return '<div class="empty">表示できる成績がありません</div>';
- const headers=['順位','選手',isTwo?'③試合':'試合','勝','負',...(isTwo?['引分']:[]),isTwo?'①勝越':'②勝越',isTwo?'②勝率':'③勝率',...(!isTwo?['得点','失点','①得失点差']:[]),...(overall?['Day']:[])];
+ const headers=['順位','選手',isTwo?'③試合':'試合','勝','負',...(isTwo?['引分']:[]),isTwo?'①勝越':'②勝越',isTwo?'②勝率':'③勝率','得点','失点',isTwo?'得失点差':'①得失点差',...(overall?['Day']:[])];
  const displayHeader=h=>{const m=/^([①②③])(.+)$/.exec(h);return m?`<span class="rank-header-label">${esc(m[2])}</span><small class="rank-header-order">ー ${'①②③'.indexOf(m[1])+1} ー</small>`:esc(h);};
  const td=(label,value,cls='')=>`<td data-label="${label}"${cls?` class="${cls}"`:''}>${value}</td>`;
  const html=rows.map(r=>{
   const cells=[
    td('順位',`<strong>${r.rank}</strong>`,'standings-rank'),td('選手',esc(`${r.name} #${r.id}`),'player-name'),td(isTwo?'③試合':'試合',r.matches),td('勝',r.wins),td('負',r.losses),
    ...(isTwo?[td('引分',r.draws)]:[]),td('勝越',`${r.spread>0?'+':''}${r.spread}`,r.spread>=0?'pos':'neg'),td('勝率',formatRate(r.rate)),
-   ...(!isTwo?[td('得点',r.scored),td('失点',r.conceded),td('得失点',`${r.diff>0?'+':''}${r.diff}`,r.diff>=0?'pos':'neg')]:[]),
+   td('得点',r.scored),td('失点',r.conceded),td('得失点差',`${r.diff>0?'+':''}${r.diff}`,r.diff>=0?'pos':'neg'),
    ...(overall?[td('Day',adoptedDayIcons(r),'adopted-days-cell')]:[])
   ];
   return `<tr class="${r.rank<=3?'podium':''}">${cells.join('')}</tr>`;
@@ -292,10 +292,10 @@ function rosterEventChange(button){
 
 function reportHTML(id){
  const e=eventById(id),rows=standings(ed(),id),date=id==='overall'?dateFor('day3'):dateFor(id),isTwo=id==='two',overall=id==='overall';
- const headers=['順位','選手',isTwo?'③試合':'試合','勝','負',...(isTwo?['引分']:[]),isTwo?'①勝越':'②勝越',isTwo?'②勝率':'③勝率',...(!isTwo?['得点','失点','①得失点差']:[]),...(overall?['Day']:[])];
+ const headers=['順位','選手',isTwo?'③試合':'試合','勝','負',...(isTwo?['引分']:[]),isTwo?'①勝越':'②勝越',isTwo?'②勝率':'③勝率','得点','失点',isTwo?'得失点差':'①得失点差',...(overall?['Day']:[])];
  const displayHeader=h=>{const m=/^([①②③])(.+)$/.exec(h);return m?`<span class="rank-header-label">${esc(m[2])}</span><small class="rank-header-order">ー ${'①②③'.indexOf(m[1])+1} ー</small>`:esc(h);};
  const tr=rows.map(r=>{
-  const vals=[r.rank,esc(`${r.name} #${r.id}`),r.matches,r.wins,r.losses,...(isTwo?[r.draws]:[]),`${r.spread>0?'+':''}${r.spread}`,formatRate(r.rate),...(!isTwo?[r.scored,r.conceded,`${r.diff>0?'+':''}${r.diff}`]:[]),...(overall?[adoptedDayIcons(r)]:[])];
+  const vals=[r.rank,esc(`${r.name} #${r.id}`),r.matches,r.wins,r.losses,...(isTwo?[r.draws]:[]),`${r.spread>0?'+':''}${r.spread}`,formatRate(r.rate),r.scored,r.conceded,`${r.diff>0?'+':''}${r.diff}`,...(overall?[adoptedDayIcons(r)]:[])];
   return `<tr>${vals.map((v,i)=>`<td data-label="${headers[i]}"${i===0?' class="standings-rank"':''}>${v}</td>`).join('')}</tr>`;
  }).join('');
  // The event's statistical columns (from 試合 to the last field) share one width.
@@ -417,8 +417,8 @@ function matchSave(form){const f=new FormData(form),a=Number(f.get('a_no')||f.ge
  editingMatch=null;preselectedPair=null;save();render();notice('試合結果を保存しました。');
 }
 
-function asCSV(id){const isTwo=id==='two',overall=id==='overall';let h=['順位','氏名','選手No.','試合','勝','負'];if(isTwo)h.push('引分');h.push('勝越','勝率');if(!isTwo)h.push('得点','失点','得失点');if(overall)h.push('Day');
- const lines=[h,...standings(ed(),id).map(r=>{const a=[r.rank,r.name,r.id,r.matches,r.wins,r.losses];if(isTwo)a.push(r.draws);a.push(r.spread,formatRate(r.rate));if(!isTwo)a.push(r.scored,r.conceded,r.diff);if(overall)a.push(r.selectedDays.map(dayName).join('+'));return a})];
+function asCSV(id){const isTwo=id==='two',overall=id==='overall';let h=['順位','氏名','選手No.','試合','勝','負'];if(isTwo)h.push('引分');h.push('勝越','勝率','得点','失点','得失点差');if(overall)h.push('Day');
+ const lines=[h,...standings(ed(),id).map(r=>{const a=[r.rank,r.name,r.id,r.matches,r.wins,r.losses];if(isTwo)a.push(r.draws);a.push(r.spread,formatRate(r.rate),r.scored,r.conceded,r.diff);if(overall)a.push(r.selectedDays.map(dayName).join('+'));return a})];
  const safe=s=>{const t=String(s??'');return '"'+(typeof s==='string'&&/^[=+\-@\t\r]/.test(t)?"'":'')+t.replaceAll('"','""')+'"'};return '\ufeff'+lines.map(a=>a.map(safe).join(',')).join('\r\n')}
 function download(name,content,type){const blob=new Blob([content],{type}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)}
 function timestamp(){const d=new Date(),pad=x=>String(x).padStart(2,'0');return `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`}

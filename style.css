@@ -768,3 +768,41 @@ html{scroll-padding-top:100px}
     overflow-wrap:anywhere;
   }
 }
+
+/* v30: disable outcome and score inputs until prerequisites are satisfied. */
+@media screen {
+  .entry-form .winner-button:disabled,
+  .entry-form .draw-button:disabled {
+    background:#f1f3f2;
+    border-color:#dce3df;
+    color:#9aa8a1;
+    opacity:.65;
+    cursor:not-allowed;
+  }
+  .entry-form .result-score select:disabled {
+    background:#f1f3f2;
+    border-color:#dce3df;
+    color:#9aa8a1;
+    opacity:.65;
+    cursor:not-allowed;
+  }
+}
+
+/* v30: yellow, high-contrast operation feedback in the fixed header. */
+@media screen {
+  .topbar .tabs #notice.show {
+    background:#ffe58c;
+    color:#513a00;
+    border:1px solid #dfad24;
+    border-radius:6px;
+    padding:5px 10px;
+    box-shadow:0 1px 4px #00000020;
+    font-weight:800;
+  }
+}
+@media screen and (max-width:480px) {
+  .topbar .tabs #notice.show {
+    margin-top:4px;
+    padding:5px 10px;
+  }
+}

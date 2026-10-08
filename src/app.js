@@ -27,7 +27,7 @@ function save(){try{localStorage.setItem(KEY,JSON.stringify(data))}catch(e){aler
 let noticeTimeout=null;
 function notice(msg){const n=$('notice');if(!n)return;clearTimeout(noticeTimeout);n.textContent=msg;n.title=msg;n.classList.add('show');noticeTimeout=setTimeout(()=>{n.classList.remove('show');n.textContent='';n.removeAttribute('title');},4000)}
 function eventSelect(selected,overall=false,id='event-picker'){return `<select id="${id}">${EVENTS.filter(e=>overall||e.id!=='overall').map(e=>`<option value="${e.id}" ${e.id===selected?'selected':''}>${esc(e.label)}</option>`).join('')}</select>`}
-function playerOptions(selected=null){return `<option value="">選手を選択</option>`+[...ed().players].sort((a,b)=>(a.kana||a.name).localeCompare(b.kana||b.name,'ja')).map(p=>`<option value="${p.id}" ${p.id===selected?'selected':''}>${esc(`#${p.id} ${p.name}`)}</option>`).join('')}
+function playerOptions(selected=null){return `<option value="">選手を選択</option>`+[...ed().players].sort((a,b)=>a.id-b.id).map(p=>`<option value="${p.id}" ${p.id===selected?'selected':''}>${esc(`#${p.id} ${p.name}`)}</option>`).join('')}
 function renderEditionPicker(){const box=$('edition-picker');if(box)box.innerHTML=data.editions.map(e=>`<option value="${esc(e.id)}" ${e.id===ed()?.id?'selected':''}>${esc(e.name)}</option>`).join('')}
 function renderHeaderEvent(){
  const box=document.querySelector('.header-event'),select=$('header-event');
@@ -40,6 +40,7 @@ function render(){
  document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
  renderHeaderEvent();
  $('app').innerHTML=({entry:renderEntry,players:renderPlayers,export:renderExport})[tab]();
+ if(tab==='entry')updateSubmitEnabled($('match-form'));
  renderEditionPicker();
 }
 function dateFor(eventId){return ed().dates?.[eventId]||(ed().id==='classic-2026'?eventById(eventId)?.date:'')||''}
@@ -70,39 +71,50 @@ function pairingTable(pairs){
  const list=filtered.length?`<table class="data-table pairing-list"><thead><tr><th>対戦待ち</th><th>未対戦相手</th><th aria-label="操作"></th></tr></thead><tbody>${filtered.map(([id,opps])=>`<tr><td class="pairing-name">${esc(playerLabel(id))}</td><td class="pairing-opponents"><div class="opponents">${opps.length?opps.sort((a,b)=>a-b).map(n=>`<button type="button" class="opponent-no" data-action="pick-pair" data-a="${id}" data-b="${n}" title="${esc(player(n)?.name||playerLabel(n))}" aria-label="${esc(playerLabel(n))}と対戦を組む">${n}</button>`).join(''):'<span class="muted">ー</span>'}</div></td><td class="pairing-actions"><button type="button" class="btn small pairing-remove" data-action="remove-waiting" data-id="${id}" aria-label="${esc(playerLabel(id))}を対戦待ちから削除">削除</button></td></tr>`).join('')}</tbody></table>`:`<div class="empty">${busy.length?'対戦待ちの選手がいません':'対戦待ちの選手がいません'}</div>`;
  return list;
 }
-function matchPlayerField(side,id,label,winningSide){
+function matchPlayerField(side,id,label,winningSide,pairReady){
  const selected=winningSide===side,other=['a','b'].includes(winningSide)&&winningSide!==side;
  const state=selected?'win':other?'lose':'';
- return `<div class="match-player"><div class="match-player-controls"><label class="field match-no-field"><input type="number" name="${side}_no" data-match-side="${side}" aria-label="${label}の番号" min="1" step="1" inputmode="numeric" value="${id||''}" placeholder="No."></label><label class="field match-name-field"><select name="${side}" data-match-side="${side}" aria-label="${label}の選手名">${playerOptions(id)}</select></label></div><button type="button" data-winner-button="${side}" class="winner-button ${state}" aria-pressed="${selected?'true':'false'}">${other?'負':'勝'}</button></div>`;
+ return `<div class="match-player"><div class="match-player-controls"><label class="field match-no-field"><input type="number" name="${side}_no" data-match-side="${side}" aria-label="${label}の番号" min="1" step="1" inputmode="numeric" value="${id||''}" placeholder="No."></label><label class="field match-name-field"><select name="${side}" data-match-side="${side}" aria-label="${label}の選手名">${playerOptions(id)}</select></label></div><button type="button" data-winner-button="${side}" class="winner-button ${state}" aria-pressed="${selected?'true':'false'}" ${pairReady?'':'disabled'}>${other?'負':'勝'}</button></div>`;
 }
 function renderEntry(){
  const e=eventById(activeEvent),matches=resultsFor(activeEvent),current=editingMatch?ed().matches.find(x=>x.id===editingMatch):null;
  const first=current?.a||preselectedPair?.a||null,second=current?.b||preselectedPair?.b||null;
  const winningSide=''; // Require a deliberate button press, including during corrections.
+ const pairReady=Boolean(first&&second&&first!==second&&player(first)&&player(second));
  const twoScore=current?`${current.sa}-${current.sb}`:'';
  const pts=e.kind==='cube'?[1,2,3,4,6,8,12]:[1,2,3];
  const pointsLabel=e.kind==='points'?{1:'1-0 シングル勝ち',2:'2-0 ギャモン勝ち',3:'3-0 バックギャモン勝ち'}:Object.fromEntries(pts.map(n=>[n,`${n}-0`]));
- const resultControl=e.kind==='two'?`<label class="field result-score"><select name="result" aria-label="得点" required><option value="">得点を選択</option>${['2-0','2-1','1-1','1-2','0-2'].map(x=>`<option value="${x}" ${twoScore===x?'selected':''}>${x}</option>`).join('')}</select></label>`:`<label class="field result-score"><select name="points" aria-label="得点" required><option value="">得点を選択</option>${pts.map(n=>`<option value="${n}" ${current&&Math.max(current.sa,current.sb)===n?'selected':''}>${pointsLabel[n]}</option>`).join('')}</select></label>`;
+ const resultControl=e.kind==='two'?`<label class="field result-score"><select name="result" aria-label="得点" required disabled><option value="">得点を選択</option>${['2-0','2-1','1-1','1-2','0-2'].map(x=>`<option value="${x}" ${twoScore===x?'selected':''}>${x}</option>`).join('')}</select></label>`:`<label class="field result-score"><select name="points" aria-label="得点" required disabled><option value="">得点を選択</option>${pts.map(n=>`<option value="${n}" ${current&&Math.max(current.sa,current.sb)===n?'selected':''}>${pointsLabel[n]}</option>`).join('')}</select></label>`;
  const addable=availableWaitingPlayers(ed(),activeEvent);
  const addControl=`<div class="pairing-add"><select id="pair-add-player" aria-label="対戦待ちに追加する選手番号" ${addable.length?'':'disabled'}><option value="">選手選択</option>${addable.map(p=>`<option value="${p.id}">${esc(`#${p.id} ${p.name}`)}</option>`).join('')}</select><button type="button" class="btn small" data-action="add-waiting" ${addable.length?'':'disabled'}>追加</button></div>`;
  const pairs=unplayedPairs(ed(),activeEvent);
  const middle=e.kind==='two'
-   ? `<div class="vs match-versus two-controls"><span class="versus-label">VS</span><button type="button" class="draw-button" data-draw-button aria-pressed="false">引分</button></div>`
+   ? `<div class="vs match-versus two-controls"><span class="versus-label">VS</span><button type="button" class="draw-button" data-draw-button aria-pressed="false" ${pairReady?'':'disabled'}>引分</button></div>`
    : `<span class="vs match-versus" aria-hidden="true">VS</span>`;
- const form=`<form id="match-form" data-kind="${e.kind}" data-winner="${winningSide}"><div class="scoreline ${e.kind==='two'?'two-entry':''}">${matchPlayerField('a',first,'左選手',winningSide)}${middle}${matchPlayerField('b',second,'右選手',winningSide)}</div><div class="result-row">${resultControl}<button type="submit" class="btn primary" disabled>${current?'結果を更新':'結果登録'}</button></div>${current?'<div class="btnset"><button type="button" class="btn" data-action="cancel-match">編集を取り消す</button></div>':''}</form>`;
+ const form=`<form id="match-form" data-kind="${e.kind}" data-winner="${winningSide}" data-player-pair="${first||''}:${second||''}"><div class="scoreline ${e.kind==='two'?'two-entry':''}">${matchPlayerField('a',first,'左選手',winningSide,pairReady)}${middle}${matchPlayerField('b',second,'右選手',winningSide,pairReady)}</div><div class="result-row">${resultControl}<button type="submit" class="btn primary" disabled>${current?'結果を更新':'結果登録'}</button></div>${current?'<div class="btnset"><button type="button" class="btn" data-action="cancel-match">編集を取り消す</button></div>':''}</form>`;
  return `<div class="entry-grid"><div class="entry-left"><section class="box entry-form"><h3>結果入力</h3>${form}</section><section class="box entry-pairings"><div class="section-head pairing-title"><h3>対戦斡旋</h3>${addControl}</div><div id="pair-results" class="table-scroll spaced pairing-scroll">${pairingTable(pairs)}</div></section></div><section class="box entry-history"><div class="section-head history-title"><h3>結果履歴</h3><input id="history-filter" placeholder="選手名・番号で検索" value="${esc(historySearch)}" aria-label="結果履歴検索"></div><div id="history-results" class="table-scroll spaced history-scroll">${historyTable(matches)}</div></section></div>`;
 }
 function updateSubmitEnabled(form){
- const score=String((form.elements.namedItem('result')||form.elements.namedItem('points'))?.value||'');
- // A match needs two different, registered players. Check both dropdowns, whose
- // values are kept in sync with the corresponding number inputs.
+ if(!form)return;
+ // Require two different registered players before outcome selection.
  const left=String(form.elements.namedItem('a')?.value||'');
  const right=String(form.elements.namedItem('b')?.value||'');
- const distinctPlayers=left!==''&&right!==''&&left!==right;
+ const pairReady=Boolean(left&&right&&left!==right&&player(Number(left))&&player(Number(right)));
+ form.querySelectorAll('[data-winner-button], [data-draw-button]').forEach(button=>{
+  button.disabled=!pairReady;
+ });
+ const outcomeSelected=pairReady&&['a','b','draw'].includes(form.dataset.winner)&&
+  (form.dataset.winner!=='draw'||form.dataset.kind==='two');
+ const scoreSelect=form.elements.namedItem('result')||form.elements.namedItem('points');
+ if(scoreSelect)scoreSelect.disabled=!outcomeSelected;
+ const score=String(scoreSelect?.value||'');
  const submit=form.querySelector('button[type="submit"]');
- if(submit)submit.disabled=!distinctPlayers || !score || !canRegisterSelection(form.dataset.kind,form.dataset.winner,score);
+ if(submit)submit.disabled=!outcomeSelected||!score||!canRegisterSelection(form.dataset.kind,form.dataset.winner,score);
 }
 function setWinner(form,side){
+ if(!form)return;
+ const a=String(form.elements.namedItem('a')?.value||''),b=String(form.elements.namedItem('b')?.value||'');
+ if(side&&(!a||!b||a===b||!player(Number(a))||!player(Number(b))))return;
  form.dataset.winner=side;
  form.querySelectorAll('[data-winner-button]').forEach(button=>{
   const state=!['a','b'].includes(side)?'':side===button.dataset.winnerButton?'win':'lose';
@@ -118,6 +130,13 @@ function syncMatchPlayer(el){
  const side=el.dataset.matchSide,number=form.elements.namedItem(side+'_no'),select=form.elements.namedItem(side);
  if(el.tagName==='SELECT')number.value=select.value;
  else {const parsed=Number(number.value);select.value=number.value!==''&&player(parsed)?String(parsed):'';}
+ const pair=String(form.elements.namedItem('a')?.value||'')+':'+String(form.elements.namedItem('b')?.value||'');
+ if(form.dataset.playerPair!==pair){
+  form.dataset.playerPair=pair;
+  setWinner(form,'');
+  const score=form.elements.namedItem('result')||form.elements.namedItem('points');
+  if(score)score.value='';
+ }
  updateSubmitEnabled(form);
 }
 function statsTable(eventId,preview=false){

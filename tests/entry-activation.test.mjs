@@ -1,15 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {canRegisterSelection} from '../src/ranking.mjs';
+import {canRegisterSelection,isEventEntrant} from '../src/ranking.mjs';
 
 // Test the actual UI eligibility handler with a small, dependency-free fake form.
 const src=readFileSync(new URL('../src/app.js', import.meta.url),'utf8');
 const start=src.indexOf('function updateSubmitEnabled(form){');
 const end=src.indexOf('\nfunction setWinner(form,side){',start);
 assert.ok(start>=0&&end>start,'entry eligibility handler should be defined');
-const updateSubmitEnabled=Function('player','canRegisterSelection',src.slice(start,end)+'\nreturn updateSubmitEnabled;')(
-  id=>[1,2,3].includes(id)?{id}:undefined,canRegisterSelection
+const currentEdition={players:[1,2,3].map(id=>({id,name:'P'+id,entries:['day1','two']}))};
+const updateSubmitEnabled=Function('isEventEntrant','ed','activeEvent','canRegisterSelection',src.slice(start,end)+'\nreturn updateSubmitEnabled;')(
+  isEventEntrant,()=>currentEdition,'day1',canRegisterSelection
 );
 function makeForm(kind='points') {
   const inputs={a:{value:''},b:{value:''},points:{value:''},result:{value:''}};
@@ -53,4 +54,12 @@ test('winner button disabled markup, player-number sorting and yellow notice sty
   assert.match(src,/\.sort\(\(a,b\)=>a\.id-b\.id\)/);
   const css=readFileSync(new URL('../style.css',import.meta.url),'utf8');
   assert.match(css,/\.topbar \.tabs #notice\.show\s*\{\s*background:#ffe58c;/);
+});
+
+test('player is registered globally but NOT entered in current event: outcomes and submission remain disabled',()=>{
+ const f=makeForm();f.inputs.a.value='1';f.inputs.b.value='2';f.dataset.winner='a';f.inputs.points.value='1';
+ currentEdition.players[1].entries=['day2'];
+ check(f);assert.ok(f.buttons.every(b=>b.disabled));assert.equal(f.inputs.points.disabled,true);assert.equal(f.submit.disabled,true);
+ currentEdition.players[1].entries=['day1','two'];
+ check(f);assert.ok(f.buttons.every(b=>!b.disabled));assert.equal(f.submit.disabled,false);
 });

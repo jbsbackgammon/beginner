@@ -8,6 +8,47 @@ export const EVENTS = [
   { id: 'school', label: '小学生選手権', short: '小学生選手権', date: '', kind: 'points' },
 ];
 export const eventById = (id) => EVENTS.find(e => e.id === id);
+
+/** Result entry is permitted only for players explicitly registered for that event. */
+export function isEventEntrant(edition, eventId, playerId) {
+  if (!eventById(eventId) || eventId === 'overall' || !Number.isInteger(playerId)) return false;
+  return (edition?.players || []).some(p => p.id === playerId && String(p.name || '').trim()
+    && Array.isArray(p.entries) && p.entries.includes(eventId));
+}
+
+export function eligibleEventPlayers(edition, eventId) {
+  if (!eventById(eventId) || eventId === 'overall') return [];
+  return (edition?.players || []).filter(p => isEventEntrant(edition,eventId,p.id));
+}
+export const REGISTRATION_CONFIRM_GAP_MS = 6 * 60 * 60 * 1000;
+
+/** Most recent successful result registration across all stored editions.
+ * v31 and earlier encoded the creation time in IDs like m1791440000000-abc123.
+ * Recognizing these IDs avoids losing the reminder when upgrading old browser data.
+ */
+export function latestResultRegistrationAt(editions) {
+  let latest = null;
+  for (const edition of editions || []) {
+    const saved = edition.lastResultRegisteredAt;
+    if (Number.isSafeInteger(saved) && saved > 0) latest = Math.max(latest ?? 0, saved);
+    for (const match of edition.matches || []) {
+      const legacy = /^m(\d{13})-[a-z0-9]+$/i.exec(String(match.id || ''));
+      if (legacy) {
+        const time = Number(legacy[1]);
+        if (Number.isSafeInteger(time) && time > 0) latest = Math.max(latest ?? 0, time);
+      }
+    }
+  }
+  return latest;
+}
+
+/** No dialog for the first registration; confirm only after a six-hour gap. */
+export function needsTournamentConfirmation(editions, now = Date.now()) {
+  const previous = latestResultRegistrationAt(editions);
+  return previous !== null && Number.isFinite(now)
+    && now - previous >= REGISTRATION_CONFIRM_GAP_MS;
+}
+
 /** Result history matches player numbers, names, and readings only.
  * A number-only query must match a complete player number (not score or match number).
  */

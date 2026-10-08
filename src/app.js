@@ -1,4 +1,4 @@
-import {EVENTS,eventById,validMatch,standings,entryCount,unplayedPairs,activePairings,reservePairing,cancelPairing,finishPairing,waitingPlayerIds,availableWaitingPlayers,addWaitingPlayer,removeWaitingPlayer,returnPlayersToWaiting,migrateReservedWaiting,canRegisterSelection,ensureMatchNumbers,nextMatchNumber,historySearchMatches} from './ranking.mjs';
+import {EVENTS,eventById,validMatch,standings,entryCount,unplayedPairs,activePairings,reservePairing,cancelPairing,finishPairing,waitingPlayerIds,availableWaitingPlayers,addWaitingPlayer,removeWaitingPlayer,returnPlayersToWaiting,migrateReservedWaiting,canRegisterSelection,ensureMatchNumbers,nextMatchNumber,historySearchMatches,needsTournamentConfirmation,isEventEntrant,eligibleEventPlayers} from './ranking.mjs';
 const KEY='jbs-beginner-v1';
 const eventIds=EVENTS.filter(e=>e.id!=='overall').map(e=>e.id);
 const $=id=>document.getElementById(id);
@@ -27,7 +27,7 @@ function save(){try{localStorage.setItem(KEY,JSON.stringify(data))}catch(e){aler
 let noticeTimeout=null;
 function notice(msg){const n=$('notice');if(!n)return;clearTimeout(noticeTimeout);n.textContent=msg;n.title=msg;n.classList.add('show');noticeTimeout=setTimeout(()=>{n.classList.remove('show');n.textContent='';n.removeAttribute('title');},4000)}
 function eventSelect(selected,overall=false,id='event-picker'){return `<select id="${id}">${EVENTS.filter(e=>overall||e.id!=='overall').map(e=>`<option value="${e.id}" ${e.id===selected?'selected':''}>${esc(e.label)}</option>`).join('')}</select>`}
-function playerOptions(selected=null,excluded=null){return `<option value="">選手を選択</option>`+[...ed().players].filter(p=>p.id!==excluded).sort((a,b)=>a.id-b.id).map(p=>`<option value="${p.id}" ${p.id===selected?'selected':''}>${esc(`#${p.id} ${p.name}`)}</option>`).join('')}
+function playerOptions(selected=null,excluded=null){return `<option value="">選手を選択</option>`+eligibleEventPlayers(ed(),activeEvent).filter(p=>p.id!==excluded).sort((a,b)=>a.id-b.id).map(p=>`<option value="${p.id}" ${p.id===selected?'selected':''}>${esc(`#${p.id} ${p.name}`)}</option>`).join('')}
 function renderEditionPicker(){const box=$('edition-picker');if(box)box.innerHTML=data.editions.map(e=>`<option value="${esc(e.id)}" ${e.id===ed()?.id?'selected':''}>${esc(e.name)}</option>`).join('')}
 function renderHeaderEvent(){
  const box=document.querySelector('.header-event'),select=$('header-event');
@@ -80,7 +80,7 @@ function renderEntry(){
  const e=eventById(activeEvent),matches=resultsFor(activeEvent),current=editingMatch?ed().matches.find(x=>x.id===editingMatch):null;
  const first=current?.a||preselectedPair?.a||null,second=current?.b||preselectedPair?.b||null;
  const winningSide=''; // Require a deliberate button press, including during corrections.
- const pairReady=Boolean(first&&second&&first!==second&&player(first)&&player(second));
+ const pairReady=Boolean(first&&second&&first!==second&&isEventEntrant(ed(),activeEvent,first)&&isEventEntrant(ed(),activeEvent,second));
  const twoScore=current?`${current.sa}-${current.sb}`:'';
  const pts=e.kind==='cube'?[1,2,3,4,6,8,12]:[1,2,3];
  const pointsLabel=e.kind==='points'?{1:'1-0 シングル勝ち',2:'2-0 ギャモン勝ち',3:'3-0 バックギャモン勝ち'}:Object.fromEntries(pts.map(n=>[n,`${n}-0`]));
@@ -99,7 +99,7 @@ function updateSubmitEnabled(form){
  // Require two different registered players before outcome selection.
  const left=String(form.elements.namedItem('a')?.value||'');
  const right=String(form.elements.namedItem('b')?.value||'');
- const pairReady=Boolean(left&&right&&left!==right&&player(Number(left))&&player(Number(right)));
+ const pairReady=Boolean(left&&right&&left!==right&&isEventEntrant(ed(),activeEvent,Number(left))&&isEventEntrant(ed(),activeEvent,Number(right)));
  form.querySelectorAll('[data-winner-button], [data-draw-button]').forEach(button=>{
   button.disabled=!pairReady;
  });
@@ -114,7 +114,7 @@ function updateSubmitEnabled(form){
 function setWinner(form,side){
  if(!form)return;
  const a=String(form.elements.namedItem('a')?.value||''),b=String(form.elements.namedItem('b')?.value||'');
- if(side&&(!a||!b||a===b||!player(Number(a))||!player(Number(b))))return;
+ if(side&&(!a||!b||a===b||!isEventEntrant(ed(),activeEvent,Number(a))||!isEventEntrant(ed(),activeEvent,Number(b))))return;
  form.dataset.winner=side;
  form.querySelectorAll('[data-winner-button]').forEach(button=>{
   const state=!['a','b'].includes(side)?'':side===button.dataset.winnerButton?'win':'lose';
@@ -145,7 +145,7 @@ function syncMatchPlayer(el){
  const form=el.closest('#match-form');if(!form)return;
  const side=el.dataset.matchSide,number=form.elements.namedItem(side+'_no'),select=form.elements.namedItem(side);
  if(el.tagName==='SELECT')number.value=select.value;
- else {const parsed=Number(number.value);select.value=number.value!==''&&player(parsed)?String(parsed):'';}
+ else {const parsed=Number(number.value);select.value=number.value!==''&&isEventEntrant(ed(),activeEvent,parsed)?String(parsed):'';}
  refreshMatchPlayerOptions(form,side);
  const pair=String(form.elements.namedItem('a')?.value||'')+':'+String(form.elements.namedItem('b')?.value||'');
  if(form.dataset.playerPair!==pair){
@@ -257,6 +257,7 @@ function renderExport(){
 
 function matchSave(form){const f=new FormData(form),a=Number(f.get('a_no')||f.get('a')),b=Number(f.get('b_no')||f.get('b'));
  if(!a||!b||a===b){alert(a===b&&a>0?'同じ選手同士の結果は登録できません。':'左右に異なる選手を指定してください。');return}
+ if(!isEventEntrant(ed(),activeEvent,a)||!isEventEntrant(ed(),activeEvent,b)){alert(`${evLabel(activeEvent)}で出場登録されている選手だけが結果登録できます。選手管理の出場設定をご確認ください。`);return}
  let sa,sb;
  const winner=form.dataset.winner;
  if(activeEvent==='two'){
@@ -271,9 +272,15 @@ function matchSave(form){const f=new FormData(form),a=Number(f.get('a_no')||f.ge
   sa=winner==='a'?val:0;sb=winner==='b'?val:0;
  }
  const m={id:editingMatch||'m'+Date.now()+'-'+Math.random().toString(36).slice(2,8),event:activeEvent,a,b,sa,sb};const err=validMatch(m,new Set(ed().players.map(p=>p.id)));if(err){alert(err);return}
+ // For new result registrations, confirm the selected tournament after six hours of inactivity.
+ // Corrections do not count as a new registration and must not reset this reminder.
+ if(!editingMatch && needsTournamentConfirmation(data.editions)){
+  const message=`大会名の確認\n前回の結果登録から6時間以上経過しています。\n大会名「${evLabel(activeEvent)}」に間違いないか確認してください。\nこの大会に結果を登録しますか？`;
+  if(!confirm(message))return;
+ }
  const repeated=ed().matches.some(x=>x.id!==m.id&&x.event===m.event&&((x.a===a&&x.b===b)||(x.a===b&&x.b===a)));
  if(repeated&&!confirm('この2名は既にこの大会で対戦しています。重複対戦として登録しますか？'))return;
- if(editingMatch){const i=ed().matches.findIndex(x=>x.id===editingMatch);if(i<0)return;m.matchNo=ed().matches[i].matchNo;ed().matches[i]=m;}else{m.matchNo=nextMatchNumber(ed(),activeEvent);ed().matches.push(m);}
+ if(editingMatch){const i=ed().matches.findIndex(x=>x.id===editingMatch);if(i<0)return;m.matchNo=ed().matches[i].matchNo;ed().matches[i]=m;}else{m.matchNo=nextMatchNumber(ed(),activeEvent);ed().matches.push(m);ed().lastResultRegisteredAt=Date.now();}
  finishPairing(ed(),activeEvent,a,b);
  returnPlayersToWaiting(ed(),activeEvent,a,b);
  editingMatch=null;preselectedPair=null;save();render();notice('試合結果を保存しました。');
@@ -351,7 +358,7 @@ document.querySelectorAll('[data-header-action]').forEach(b=>b.addEventListener(
 renderHeaderEvent();
 $('header-event').addEventListener('change',e=>{activeEvent=e.target.value;editingMatch=null;preselectedPair=null;historySearch='';render()});
 $('app').addEventListener('submit',e=>{if(e.target.id==='match-form'){e.preventDefault();matchSave(e.target)}});
-$('app').addEventListener('change',e=>{if(e.target.id==='edition-picker'){data.activeEditionId=e.target.value;activeEvent='day1';$('header-event').value='day1';editingMatch=null;save();render()}else if(e.target.id==='edition-name-input'){const name=e.target.value.trim();if(!name){e.target.value=ed().name;return}ed().name=name;save();render();notice('大会名を保存しました。')}else if(e.target.matches('[data-match-side]')){syncMatchPlayer(e.target)}else if(['result','points'].includes(e.target.name)&&e.target.closest('#match-form')){updateSubmitEnabled(e.target.closest('#match-form'))}else if(e.target.id==='edition-date-input'){const day=activeEvent==='overall'?'day3':activeEvent;ed().dates=ed().dates||{};ed().dates[day]=e.target.value;if(day==='day3')ed().dates.overall=e.target.value;save();render()}else if(e.target.matches('[data-roster-name]')){rosterNameChange(e.target)}else if(e.target.matches('[data-roster-kana]')){rosterKanaChange(e.target)}});
+$('app').addEventListener('change',e=>{if(e.target.id==='edition-picker'){data.activeEditionId=e.target.value;activeEvent='day1';$('header-event').value='day1';editingMatch=null;save();render()}else if(e.target.id==='edition-name-input'){const name=e.target.value.trim();if(!name){e.target.value=ed().name;return}ed().name=name;save();render();notice('大会名を保存しました。')}else if(e.target.matches('[data-match-side]')){syncMatchPlayer(e.target);if(e.target.matches('input[data-match-side]')&&e.target.value!==''&&!isEventEntrant(ed(),activeEvent,Number(e.target.value))){const wrong=e.target.value;e.target.value='';syncMatchPlayer(e.target);notice(`#${wrong} は${evLabel(activeEvent)}に出場登録されていません。`);}}else if(['result','points'].includes(e.target.name)&&e.target.closest('#match-form')){updateSubmitEnabled(e.target.closest('#match-form'))}else if(e.target.id==='edition-date-input'){const day=activeEvent==='overall'?'day3':activeEvent;ed().dates=ed().dates||{};ed().dates[day]=e.target.value;if(day==='day3')ed().dates.overall=e.target.value;save();render()}else if(e.target.matches('[data-roster-name]')){rosterNameChange(e.target)}else if(e.target.matches('[data-roster-kana]')){rosterKanaChange(e.target)}});
 $('app').addEventListener('click',e=>{const rosterToggle=e.target.closest('[data-roster-event]');if(rosterToggle){rosterEventChange(rosterToggle);return}const win=e.target.closest('[data-winner-button]');if(win){const form=win.closest('#match-form');setWinner(form,form.dataset.winner===win.dataset.winnerButton?'':win.dataset.winnerButton);return}const draw=e.target.closest('[data-draw-button]');if(draw){const form=draw.closest('#match-form');setWinner(form,form.dataset.winner==='draw'?'':'draw');return}const b=e.target.closest('[data-action]');if(!b)return;if(b.dataset.action==='pick-pair'){
  const a=Number(b.dataset.a),c=Number(b.dataset.b);
  if(!unplayedPairs(ed(),activeEvent).some(p=>p.a===Math.min(a,c)&&p.b===Math.max(a,c))){notice('この組み合わせは斡旋できません。');render();return}

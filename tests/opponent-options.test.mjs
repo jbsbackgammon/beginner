@@ -6,9 +6,9 @@ const source=readFileSync(new URL('../src/app.js',import.meta.url),'utf8');
 const start=source.indexOf('function playerOptions(selected=null,excluded=null){');
 const end=source.indexOf('\nfunction renderEditionPicker(){',start);
 assert.ok(start>=0&&end>start,'playerOptions signature exists');
-const names=[{id:10,name:'十'},{id:2,name:'二'},{id:1,name:'一'}];
-const playerOptions=Function('ed','esc',source.slice(start,end)+'\nreturn playerOptions;')(
- ()=>({players:names}), v=>String(v)
+const names=[{id:10,name:'十',entries:['day1']},{id:2,name:'二',entries:['day1']},{id:1,name:'一',entries:['day1']},{id:3,name:'三',entries:['day2']}];
+const playerOptions=Function('ed','activeEvent','eligibleEventPlayers','esc',source.slice(start,end)+'\nreturn playerOptions;')(
+ ()=>({players:names}), 'day1', (ed,eventId)=>ed.players.filter(p=>p.entries?.includes(eventId)),v=>String(v)
 );
 
 test('opponent is absent rather than merely disabled',()=>{
@@ -21,4 +21,9 @@ test('opponent is absent rather than merely disabled',()=>{
 test('when opponent is unselected, all players reappear',()=>{
  const options=playerOptions(null,null);
  for(const id of [1,2,10])assert.match(options,new RegExp(`value="${id}"`));
+});
+
+test('opponent dropdown excludes non-entrant even if their player master entry exists',()=>{
+ const options=playerOptions();
+ assert.doesNotMatch(options,/value="3"/);
 });

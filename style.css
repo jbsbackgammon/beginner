@@ -734,3 +734,37 @@ html{scroll-padding-top:100px}
     justify-content:center!important;
   }
 }
+
+
+/* v28: Show brief operation messages beside the header navigation,
+   never as a banner within the main content areas. */
+@media screen {
+  .topbar .tabs #notice {
+    display:none;
+    flex:0 1 auto;
+    min-width:0;
+    max-width:360px;
+    margin:0;
+    padding:0 0 0 6px;
+    border:0;
+    border-radius:0;
+    background:transparent;
+    color:#e5ffcc;
+    font-size:15px;
+    font-weight:700;
+    line-height:1.45;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .topbar .tabs #notice.show {display:block}
+}
+@media screen and (max-width:480px) {
+  .topbar .tabs #notice.show {
+    flex:1 0 100%;
+    max-width:100%;
+    padding:3px 2px 7px;
+    white-space:normal;
+    overflow-wrap:anywhere;
+  }
+}

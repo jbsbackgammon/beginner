@@ -24,7 +24,8 @@ const playerLabel=id=>{const p=player(id);return p?`#${p.id} ${p.name}`:`#${id}�
 const formatRate=n=>`${(n*100).toFixed(1)}%`;
 const dayName=id=>({'day1':'Day1','day2':'Day2','day3':'Day3'}[id]||id);
 function save(){try{localStorage.setItem(KEY,JSON.stringify(data))}catch(e){alert('ブラウザに保存できません。JSONバックアップを出力してください。')}renderEditionPicker();}
-function notice(msg){const n=$('notice');n.textContent=msg;n.classList.add('show');setTimeout(()=>n.classList.remove('show'),4000)}
+let noticeTimeout=null;
+function notice(msg){const n=$('notice');if(!n)return;clearTimeout(noticeTimeout);n.textContent=msg;n.title=msg;n.classList.add('show');noticeTimeout=setTimeout(()=>{n.classList.remove('show');n.textContent='';n.removeAttribute('title');},4000)}
 function eventSelect(selected,overall=false,id='event-picker'){return `<select id="${id}">${EVENTS.filter(e=>overall||e.id!=='overall').map(e=>`<option value="${e.id}" ${e.id===selected?'selected':''}>${esc(e.label)}</option>`).join('')}</select>`}
 function playerOptions(selected=null){return `<option value="">選手を選択</option>`+[...ed().players].sort((a,b)=>(a.kana||a.name).localeCompare(b.kana||b.name,'ja')).map(p=>`<option value="${p.id}" ${p.id===selected?'selected':''}>${esc(`#${p.id} ${p.name}`)}</option>`).join('')}
 function renderEditionPicker(){const box=$('edition-picker');if(box)box.innerHTML=data.editions.map(e=>`<option value="${esc(e.id)}" ${e.id===ed()?.id?'selected':''}>${esc(e.name)}</option>`).join('')}

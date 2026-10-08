@@ -76,3 +76,54 @@
   .header-event{order:2;width:100%;max-width:none}
   .header-event select{max-width:none}
 }
+
+
+/* v10: compact side-by-side player inputs and result controls. */
+.header-event[hidden]{display:none!important}
+.entry-form .scoreline{grid-template-columns:minmax(0,1fr) 20px minmax(0,1fr);gap:8px}
+.entry-form .vs{padding-top:58px}
+.match-player-controls{display:flex;flex-direction:row;align-items:end;gap:6px}
+.match-player-controls .field{margin:0;min-width:0}
+.match-player-controls .match-no-field{flex:0 0 42px;width:42px}
+.match-player-controls .match-name-field{flex:1 1 auto}
+.match-player-controls .match-no-field input{width:42px;height:42px;padding:8px 3px;text-align:center;appearance:textfield;-moz-appearance:textfield}
+.match-player-controls .match-no-field input::-webkit-outer-spin-button,.match-player-controls .match-no-field input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.match-player-controls .match-name-field select{height:41px;padding:8px 5px;font-size:12px}
+.winner-button{margin-top:9px;padding:6px 12px;min-width:55px;background:#fff;border:1px solid #cbd9d2;border-radius:6px;color:#263a33;font-weight:700}
+.winner-button.win{background:#ffe3e2;border-color:#eca5a6;color:#aa3333}
+.winner-button.lose{background:#e2f0ff;border-color:#a9cbe9;color:#225f9f}
+.winner-button:focus-visible{outline:2px solid #599e84;outline-offset:2px}
+.winner-checkbox{margin:15px 0 10px}
+.result-row{display:flex;align-items:flex-end;gap:9px}
+.result-row .result-score{flex:1 1 auto;min-width:0;margin:0}
+.result-row .result-score select{width:100%;height:41px;padding:7px 6px}
+.result-row button[type=submit]{flex:0 0 auto;height:41px;padding:8px 11px;white-space:nowrap}
+.entry-form .btnset{margin-top:12px}
+/* Every completed participant is one row, with unplayed numbers as chips. */
+.pairing-list th:first-child,.pairing-list td:first-child{text-align:left;width:42%}
+.pairing-list th:nth-child(2),.pairing-list td:nth-child(2){text-align:left}
+.pairing-name{font-weight:600}
+.opponents{display:flex;gap:5px;flex-wrap:wrap;align-items:center}
+.opponent-no{font-size:12px;min-width:30px;padding:5px 7px;border:1px solid #cbd9d2;background:#fff;border-radius:6px;color:#075b4a;font-weight:700}
+.opponent-no:hover{background:#e6f3ed}
+/* Result history: name | score | name | operations. */
+.history-table th:first-child,.history-table td:first-child,.history-table th:nth-child(3),.history-table td:nth-child(3){text-align:left}
+.history-table th:nth-child(2),.history-table td:nth-child(2){text-align:center}
+.history-table th:last-child,.history-table td:last-child{text-align:right}
+.history-table td{padding:10px 6px}
+.history-table .history-name{font-weight:600}
+.history-table .history-score{font-weight:700;white-space:nowrap}
+@media(max-width:1150px) and (min-width:851px){
+ .entry-grid{grid-template-columns:minmax(355px,410px) minmax(0,1fr)}
+ .entry-form{padding:14px}
+ .entry-form .scoreline{gap:5px}
+ .match-player-controls .match-no-field,.match-player-controls .match-no-field input{width:42px;flex-basis:42px}
+}
+@media(max-width:410px){
+ .entry-form{padding:12px}
+ .entry-form .scoreline{gap:5px;grid-template-columns:minmax(0,1fr) 15px minmax(0,1fr)}
+ .match-player-controls .match-no-field,.match-player-controls .match-no-field input{width:42px;flex-basis:42px}
+ .match-player-controls .match-name-field select{font-size:11px}
+ .result-row{gap:5px}
+ .result-row button[type=submit]{font-size:12px;padding:7px}
+}

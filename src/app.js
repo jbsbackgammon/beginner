@@ -104,15 +104,18 @@ function pairingTable(pairs){
  const list=filtered.length?`<table class="data-table pairing-list"><thead><tr><th>対戦待ち</th><th>未対戦相手</th><th aria-label="操作"></th></tr></thead><tbody>${filtered.map(([id,opps])=>`<tr><td class="pairing-name">${esc(playerLabel(id))}</td><td class="pairing-opponents"><div class="opponents">${opps.length?opps.sort((a,b)=>a-b).map(n=>`<button type="button" class="opponent-no" data-action="pick-pair" data-a="${id}" data-b="${n}" title="${esc(player(n)?.name||playerLabel(n))}" aria-label="${esc(playerLabel(n))}と対戦を組む">${n}</button>`).join(''):'<span class="muted">ー</span>'}</div></td><td class="pairing-actions"><button type="button" class="btn small pairing-remove" data-action="remove-waiting" data-id="${id}" aria-label="${esc(playerLabel(id))}を対戦待ちから削除">削除</button></td></tr>`).join('')}</tbody></table>`:`<div class="empty">対戦待ちの選手がいません</div>`;
  return list;
 }
-function matchPlayerField(side,id,label,winningSide,pairReady,otherId){
- const selected=winningSide===side,other=['a','b'].includes(winningSide)&&winningSide!==side;
- const state=selected?'win':other?'lose':'';
- return `<div class="match-player"><div class="match-player-controls"><label class="field match-no-field"><input type="number" name="${side}_no" data-match-side="${side}" aria-label="${label}の番号" min="1" step="1" inputmode="numeric" value="${id||''}" placeholder="No."></label><label class="field match-name-field"><select name="${side}" data-match-side="${side}" aria-label="${label}の選手名">${playerOptions(id,otherId)}</select></label></div><button type="button" data-winner-button="${side}" class="winner-button ${state}" aria-pressed="${selected?'true':'false'}" ${pairReady?'':'disabled'}>${other?'負':'勝'}</button></div>`;
+function matchPlayerField(side,id,label,otherId){
+ return `<div class="match-player"><div class="match-player-controls"><label class="field match-no-field"><input type="number" name="${side}_no" data-match-side="${side}" aria-label="${label}の番号" min="1" step="1" inputmode="numeric" value="${id||''}" placeholder="No."></label><label class="field match-name-field"><select name="${side}" data-match-side="${side}" aria-label="${label}の選手名">${playerOptions(id,otherId)}</select></label></div></div>`;
+}
+function outcomeButton(side,winningSide,pairReady){
+ const selected=winningSide===side,other=['a','b'].includes(winningSide)&&!selected;
+ return `<button type="button" data-winner-button="${side}" class="winner-button ${selected?'win':other?'lose':''}" aria-pressed="${selected}" ${pairReady?'':'disabled'}>${other?'負':'勝'}</button>`;
 }
 function renderEntry(){
  const e=eventById(activeEvent),matches=resultsFor(activeEvent),current=editingMatch?ed().matches.find(x=>x.id===editingMatch):null;
  const first=current?.a||preselectedPair?.a||null,second=current?.b||preselectedPair?.b||null;
- const winningSide=''; // Require a deliberate button press, including during corrections.
+ // New registrations start with the left player winning. Corrections reflect the recorded result.
+ const winningSide=current?(current.sa===current.sb?'draw':current.sa>current.sb?'a':'b'):'a';
  const pairReady=Boolean(first&&second&&first!==second&&isEventEntrant(ed(),activeEvent,first)&&isEventEntrant(ed(),activeEvent,second));
  const twoScore=current?`${current.sa}-${current.sb}`:'';
  const pts=e.kind==='cube'?[1,2,3,4,6,8,12]:[1,2,3];
@@ -121,10 +124,10 @@ function renderEntry(){
  const addable=availableWaitingPlayers(ed(),activeEvent);
  const addControl=`<div class="pairing-add"><select id="pair-add-player" aria-label="対戦待ちに追加する選手番号" ${addable.length?'':'disabled'}><option value="">選手選択</option>${addable.map(p=>`<option value="${p.id}">${esc(`${p.name} #${p.id}`)}</option>`).join('')}</select><button type="button" class="btn small" data-action="add-waiting" ${addable.length?'':'disabled'}>追加</button></div>`;
  const pairs=unplayedPairs(ed(),activeEvent);
- const middle=e.kind==='two'
-   ? `<div class="vs match-versus two-controls"><span class="versus-label">VS</span><button type="button" class="draw-button" data-draw-button aria-pressed="false" ${pairReady?'':'disabled'}>引分</button></div>`
-   : `<span class="vs match-versus" aria-hidden="true">VS</span>`;
- const form=`<form id="match-form" data-kind="${e.kind}" data-winner="${winningSide}" data-player-pair="${first||''}:${second||''}"><div class="scoreline ${e.kind==='two'?'two-entry':''}">${matchPlayerField('a',first,'左選手',winningSide,pairReady,second)}${middle}${matchPlayerField('b',second,'右選手',winningSide,pairReady,first)}</div><div class="result-row">${resultControl}<div class="result-actions">${current?'<button type="button" class="btn" data-action="cancel-match">編集取消</button>':''}<button type="submit" class="btn primary" disabled>${current?'結果更新':'結果登録'}</button></div></div></form>`;
+ const drawButton=e.kind==='two'
+   ? `<button type="button" class="draw-button ${winningSide==='draw'?'selected':''}" data-draw-button aria-pressed="${winningSide==='draw'}" ${pairReady?'':'disabled'}>引分</button>`
+   : `<span aria-hidden="true"></span>`;
+ const form=`<form id="match-form" data-kind="${e.kind}" data-winner="${winningSide}" data-player-pair="${first||''}:${second||''}"><div class="scoreline outcome-row ${e.kind==='two'?'two-entry':''}">${outcomeButton('a',winningSide,pairReady)}${drawButton}${outcomeButton('b',winningSide,pairReady)}</div><div class="scoreline ${e.kind==='two'?'two-entry':''}">${matchPlayerField('a',first,'左選手',second)}<span class="vs match-versus" aria-hidden="true">VS</span>${matchPlayerField('b',second,'右選手',first)}</div><div class="result-row">${resultControl}<div class="result-actions">${current?'<button type="button" class="btn" data-action="cancel-match">編集取消</button>':''}<button type="submit" class="btn primary" disabled>${current?'結果更新':'結果登録'}</button></div></div></form>`;
  return `<div class="entry-grid"><div class="entry-left"><section class="box entry-form"><h3>結果入力</h3>${form}</section><section class="box entry-pairings"><div class="section-head pairing-title"><h3>対戦斡旋</h3>${addControl}</div><div id="pair-results" class="table-scroll spaced pairing-scroll">${pairingTable(pairs)}</div></section></div><section class="box entry-history"><div class="section-head history-title"><h3>結果履歴</h3><input id="history-filter" placeholder="選手名・番号で検索" value="${esc(historySearch)}" aria-label="結果履歴検索"></div><div id="history-results" class="table-scroll spaced history-scroll">${historyTable(matches)}</div></section></div>`;
 }
 function updateSubmitEnabled(form){
@@ -183,7 +186,7 @@ function syncMatchPlayer(el){
  const pair=String(form.elements.namedItem('a')?.value||'')+':'+String(form.elements.namedItem('b')?.value||'');
  if(form.dataset.playerPair!==pair){
   form.dataset.playerPair=pair;
-  setWinner(form,'');
+  setWinner(form,'a');
   const score=form.elements.namedItem('result')||form.elements.namedItem('points');
   if(score)score.value='';
  }

@@ -1477,3 +1477,40 @@ html{scroll-padding-top:100px}
     font-weight:700!important;
   }
 }
+
+/* v52: Outcome buttons form their own row ABOVE the player number/name selects.
+   Both grids share the same columns so each button aligns with its player. */
+@media screen {
+  .entry-form .scoreline.outcome-row {
+    margin-bottom:10px;
+    align-items:center;
+  }
+  .entry-form .outcome-row .winner-button {
+    margin-top:0;
+  }
+  .entry-form .outcome-row .draw-button {
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    width:100%;
+    height:36px;
+    margin:0;
+    padding:0 2px;
+    background:#fff;
+    color:#263a33;
+    border:1px solid #cbd9d2;
+    border-radius:6px;
+    font-size:15px;
+    font-weight:700;
+    cursor:pointer;
+  }
+  .entry-form .outcome-row .draw-button.selected {
+    background:#ddf2e4;
+    border-color:#88c5a0;
+    color:#187a48;
+  }
+  .entry-form .outcome-row .draw-button:focus-visible {
+    outline:2px solid #599e84;
+    outline-offset:2px;
+  }
+}

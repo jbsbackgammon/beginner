@@ -44,10 +44,10 @@ function pdfEditionTitle(){
  return ed().name===DEFAULT_EDITION_NAME?'BACKGAMMON CLASSIC 2026':ed().name;
 }
 function venueFor(){return typeof ed().venue==='string'?ed().venue:DEFAULT_VENUE}
-function pdfHeading(eventId){
+function pdfHeading(eventId, participantCount){
  const label=eventById(eventId)?.label||'';
  const date=eventId==='overall'?dateFor('day3'):dateFor(eventId);
- const detail=[date,venueFor(),'主催 日本バックギャモン協会'].filter(Boolean).join('・');
+ const detail=[date,`出場${participantCount}名`,venueFor(),'主催 日本バックギャモン協会'].filter(Boolean).join('・');
  return `<div class="report-heading"><h2>${esc(pdfEditionTitle())} ${esc(label)} 最終成績</h2><small>${esc(detail)}</small></div>`;
 }
 
@@ -282,7 +282,12 @@ function reportHTML(id){
   const vals=[r.rank,esc(`#${r.id} ${r.name}`),r.matches,r.wins,r.losses,...(isTwo?[r.draws]:[]),`${r.spread>0?'+':''}${r.spread}`,formatRate(r.rate),...(!isTwo?[r.scored,r.conceded,`${r.diff>0?'+':''}${r.diff}`]:[]),...(overall?[adoptedDayIcons(r)]:[])];
   return `<tr>${vals.map((v,i)=>`<td data-label="${headers[i]}"${i===0?' class="standings-rank"':''}>${v}</td>`).join('')}</tr>`;
  }).join('');
- return `<div class="report">${pdfHeading(id)}<table class="report-data-table"><thead><tr>${headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${tr||`<tr><td colspan="12">成績データなし</td></tr>`}</tbody></table><p class="muted" style="margin-top:12px">${rows.length}名　／　${isTwo?'勝越→勝率→試合数':'得失点差→勝越→勝率'}順</p></div>`;
+ // The event's statistical columns (from 試合 to the last field) share one width.
+ // Rank and player columns remain compact/wide enough for names.
+ const columnCount=headers.length-2;
+ const dataWidth=72/columnCount;
+ const columnWidths=`<colgroup><col style="width:7%"><col style="width:21%">${Array.from({length:columnCount},()=>`<col style="width:${dataWidth.toFixed(6)}%">`).join('')}</colgroup>`;
+ return `<div class="report">${pdfHeading(id,rows.length)}<table class="report-data-table">${columnWidths}<thead><tr>${headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${tr||`<tr><td colspan="${headers.length}">成績データなし</td></tr>`}</tbody></table></div>`;
 }
 // A4 portrait: two columns by four rows, eight player cards per sheet.
 // Print the active event's ranking-eligible players, in ascending player-number order.

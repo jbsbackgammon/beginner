@@ -944,3 +944,12 @@ html{scroll-padding-top:100px}
 @media screen and (max-width:390px){
  .report-controls .report-venue{grid-column:1/-1}
 }
+
+/* v41: equal-width statistical columns in the printed final standings. */
+@media print {
+  #print-area .report-data-table{table-layout:fixed;width:100%}
+  #print-area .report-data-table th,
+  #print-area .report-data-table td{overflow-wrap:anywhere;word-break:normal;min-width:0}
+  #print-area .report-data-table th:first-child,
+  #print-area .report-data-table td:first-child{text-align:center}
+}

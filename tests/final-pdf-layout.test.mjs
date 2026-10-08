@@ -37,8 +37,8 @@ for(const id of ['day1','overall']){
   const widths=[...html.matchAll(/<col style="width:([\d.]+)%">/g)].map(v=>Number(v[1]));
   const expected=id==='overall'?11:10;
   assert.equal(widths.length,expected);
-  assert.equal(widths[0],7);assert.equal(widths[1],21);
-  for(const width of widths.slice(2)) assert.ok(Math.abs(width - 72/(expected-2))<0.00001);
+  assert.equal(widths[0],7);assert.equal(widths[1],24);
+  for(const width of widths.slice(2)) assert.ok(Math.abs(width - 69/(expected-2))<0.00001);
   assert.ok(Math.abs(widths.reduce((a,b)=>a+b,0)-100)<0.00001);
  });
 }

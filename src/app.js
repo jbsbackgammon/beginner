@@ -195,6 +195,7 @@ function statsTable(eventId,preview=false){
  const rows=standings(ed(),eventId),isTwo=eventId==='two',overall=eventId==='overall';
  if(!rows.length)return '<div class="empty">表示できる成績がありません</div>';
  const headers=['順位','選手',isTwo?'③試合':'試合','勝','負',...(isTwo?['引分']:[]),isTwo?'①勝越':'②勝越',isTwo?'②勝率':'③勝率',...(!isTwo?['得点','失点','①得失点差']:[]),...(overall?['採用Day']:[])];
+ const displayHeader=h=>{const m=/^([①②③])(.+)$/.exec(h);return m?`<span class="rank-header-label">${esc(m[2])}</span><small class="rank-header-order">ー ${'①②③'.indexOf(m[1])+1} ー</small>`:esc(h);};
  const td=(label,value,cls='')=>`<td data-label="${label}"${cls?` class="${cls}"`:''}>${value}</td>`;
  const html=rows.map(r=>{
   const cells=[
@@ -209,7 +210,7 @@ function statsTable(eventId,preview=false){
  // of that width, regardless of the event's differing column count.
  const unitWidth=100/(headers.length-0.5);
  const colWidths=`<colgroup><col style="width:${(unitWidth/2).toFixed(5)}%">${headers.slice(1).map(()=>`<col style="width:${unitWidth.toFixed(5)}%">`).join('')}</colgroup>`;
- return `<div class="table-scroll"><table class="data-table standings-table">${colWidths}<thead><tr>${headers.map(x=>`<th>${x}</th>`).join('')}</tr></thead><tbody>${html.join('')}</tbody></table></div>`;
+ return `<div class="table-scroll"><table class="data-table standings-table">${colWidths}<thead><tr>${headers.map(x=>`<th>${displayHeader(x)}</th>`).join('')}</tr></thead><tbody>${html.join('')}</tbody></table></div>`;
 }
 function rosterNumbers(e){
  const highest=e.players.reduce((n,p)=>Number.isInteger(p.id)&&p.id>0?Math.max(n,p.id):n,0);
@@ -278,16 +279,17 @@ function rosterEventChange(button){
 function reportHTML(id){
  const e=eventById(id),rows=standings(ed(),id),date=id==='overall'?dateFor('day3'):dateFor(id),isTwo=id==='two',overall=id==='overall';
  const headers=['順位','選手',isTwo?'③試合':'試合','勝','負',...(isTwo?['引']:[]),isTwo?'①勝越':'②勝越',isTwo?'②勝率':'③勝率',...(!isTwo?['得点','失点','①得失点差']:[]),...(overall?['採用Day']:[])];
+ const displayHeader=h=>{const m=/^([①②③])(.+)$/.exec(h);return m?`<span class="rank-header-label">${esc(m[2])}</span><small class="rank-header-order">ー ${'①②③'.indexOf(m[1])+1} ー</small>`:esc(h);};
  const tr=rows.map(r=>{
   const vals=[r.rank,esc(`#${r.id} ${r.name}`),r.matches,r.wins,r.losses,...(isTwo?[r.draws]:[]),`${r.spread>0?'+':''}${r.spread}`,formatRate(r.rate),...(!isTwo?[r.scored,r.conceded,`${r.diff>0?'+':''}${r.diff}`]:[]),...(overall?[adoptedDayIcons(r)]:[])];
   return `<tr>${vals.map((v,i)=>`<td data-label="${headers[i]}"${i===0?' class="standings-rank"':''}>${v}</td>`).join('')}</tr>`;
  }).join('');
  // The event's statistical columns (from 試合 to the last field) share one width.
- // Rank and player columns remain compact/wide enough for names.
+ // Increase the player column slightly for full Japanese names.
  const columnCount=headers.length-2;
- const dataWidth=72/columnCount;
- const columnWidths=`<colgroup><col style="width:7%"><col style="width:21%">${Array.from({length:columnCount},()=>`<col style="width:${dataWidth.toFixed(6)}%">`).join('')}</colgroup>`;
- return `<div class="report">${pdfHeading(id,rows.length)}<table class="report-data-table">${columnWidths}<thead><tr>${headers.map(h=>`<th>${h}</th>`).join('')}</tr></thead><tbody>${tr||`<tr><td colspan="${headers.length}">成績データなし</td></tr>`}</tbody></table></div>`;
+ const dataWidth=69/columnCount;
+ const columnWidths=`<colgroup><col style="width:7%"><col style="width:24%">${Array.from({length:columnCount},()=>`<col style="width:${dataWidth.toFixed(6)}%">`).join('')}</colgroup>`;
+ return `<div class="report">${pdfHeading(id,rows.length)}<table class="report-data-table">${columnWidths}<thead><tr>${headers.map(h=>`<th>${displayHeader(h)}</th>`).join('')}</tr></thead><tbody>${tr||`<tr><td colspan="${headers.length}">成績データなし</td></tr>`}</tbody></table></div>`;
 }
 // A4 portrait: two columns by four rows, eight player cards per sheet.
 // Print the active event's ranking-eligible players, in ascending player-number order.

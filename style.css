@@ -953,3 +953,25 @@ html{scroll-padding-top:100px}
   #print-area .report-data-table th:first-child,
   #print-area .report-data-table td:first-child{text-align:center}
 }
+
+/* v42: split ranking priority onto its own small, centered second line.
+   Priority is a number (not a circled number); applies to both the screen table
+   and the printed final-standings PDF. */
+.standings-table .rank-header-label,
+.report-data-table .rank-header-label{display:block;line-height:1.25}
+.standings-table .rank-header-order,
+.report-data-table .rank-header-order{display:block;font-size:11px;font-weight:500;line-height:1.15;margin-top:3px;text-align:center;white-space:nowrap;color:#586d64}
+@media print{
+  #print-area .report-data-table .rank-header-order{font-size:6.7pt;line-height:1.1;margin-top:1.1mm;color:#555}
+  #print-area .report-data-table .rank-header-label{line-height:1.15;white-space:nowrap;font-size:7.5pt;letter-spacing:-.03em}
+}
+/* Keep the three adopted-Day symbols inside their narrow PDF statistics cell. */
+@media print{
+  #print-area .report-data-table .adopted-days{
+    display:inline-grid;grid-template-columns:repeat(3,3.5mm);gap:.4mm;
+    width:11.3mm;max-width:100%;vertical-align:middle;
+  }
+  #print-area .report-data-table .adopted-day{
+    width:3.5mm;height:3.5mm;font-size:8pt;
+  }
+}

@@ -22,18 +22,18 @@
 .roster-matrix th:nth-child(2),.roster-matrix td:nth-child(2){width:180px;text-align:left}
 .roster-matrix th:nth-child(3),.roster-matrix td:nth-child(3){width:158px;text-align:left}
 .roster-matrix th:nth-child(n+4),.roster-matrix td:nth-child(n+4){width:112px}
-.roster-matrix input,.roster-matrix select{width:100%;min-width:0;border-radius:5px;padding:7px 8px;font-size:13px}
-.roster-matrix select{padding:7px 4px}
+.roster-matrix input[type="text"]{width:100%;min-width:0;border-radius:5px;padding:7px 8px;font-size:13px}
 .roster-matrix .roster-no{font-weight:700;color:#526b60}
 .roster-matrix tr.roster-inactive{background:#f5f7f6}
 .roster-matrix tr.roster-inactive td{color:#9caaa2}
-.roster-matrix input:disabled,.roster-matrix select:disabled{background:#edf0ee;color:#a0ada6;border-color:#e3e9e5;opacity:.7;cursor:not-allowed}
+.roster-matrix input[type="text"]:disabled{background:#edf0ee;color:#a0ada6;border-color:#e3e9e5;opacity:.7;cursor:not-allowed}
 .roster-matrix tr.roster-inactive [data-roster-name]{background:#fff}
 @media(max-width:850px){.roster-box{padding:8px}.roster-scroll{max-height:calc(100vh - 170px)}}
 
-/* Highlight registered attendance in the player roster. */
-.roster-matrix td:has(> select[data-roster-event] option[value="attend"]:checked){background:#fffbea}
-.roster-matrix select[data-roster-event]:has(option[value="attend"]:checked){background:#fff5c7;border-color:#e4d28f;color:#514515}
+/* A checked box marks attendance; inactive/unchecked cells remain neutral. */
+.roster-matrix input[type="checkbox"][data-roster-event]{display:block;width:19px;height:19px;min-width:19px;margin:3px auto;cursor:pointer;accent-color:#be9840}
+.roster-matrix input[type="checkbox"][data-roster-event]:disabled{cursor:not-allowed;opacity:.4}
+.roster-matrix td:has(> input[data-roster-event]:checked){background:#fff5c7}
 
 
 /* v9: page navigation at header left; tournament selector at header right. */
@@ -126,4 +126,29 @@
  .match-player-controls .match-name-field select{font-size:11px}
  .result-row{gap:5px}
  .result-row button[type=submit]{font-size:12px;padding:7px}
+}
+
+/* v11: The document scrolls vertically, rather than individual content panels.
+   Keep tables horizontally scrollable on narrow viewports. */
+.topbar{
+  position:sticky;
+  top:0;
+  z-index:1000;
+  box-shadow:0 2px 8px rgb(0 0 0 / 12%);
+}
+.table-scroll,.roster-scroll,.history-scroll,.pairing-scroll{
+  height:auto;
+  max-height:none;
+  min-height:0;
+  overflow-x:auto;
+  overflow-y:visible;
+}
+html{scroll-padding-top:100px}
+#match-form{scroll-margin-top:115px}
+@media (max-width:610px){
+  html{scroll-padding-top:165px}
+  #match-form{scroll-margin-top:175px}
+}
+@media print{
+  .topbar{position:static;box-shadow:none}
 }

@@ -114,7 +114,7 @@ function renderPlayers(){
  const header=['初級戦Day1','初級戦Day2','初級戦Day3','2ptマッチRR','キューブ有RR'];
  const rows=numbers.map(id=>{
   const p=byId.get(id),active=!!p?.name?.trim();
-  const cells=eventIds.map((event,i)=>`<td><select aria-label="No.${id} ${header[i]}" data-roster-event="${event}" ${active?'':'disabled'}><option value="">ー</option><option value="attend" ${p?.entries?.includes(event)?'selected':''}>出場</option></select></td>`).join('');
+  const cells=eventIds.map((event,i)=>`<td><input type="checkbox" aria-label="No.${id} ${header[i]} 出場" data-roster-event="${event}" ${p?.entries?.includes(event)?'checked':''} ${active?'':'disabled'}></td>`).join('');
   return `<tr data-roster-id="${id}" class="${active?'':'roster-inactive'}"><td class="roster-no">${id}</td><td><input type="text" data-roster-name aria-label="No.${id} 選手" autocomplete="off" maxlength="100" value="${esc(p?.name||'')}"></td><td><input type="text" data-roster-kana aria-label="No.${id} よみ" autocomplete="off" maxlength="100" value="${esc(p?.kana||'')}" ${active?'':'disabled'}></td>${cells}</tr>`;
  }).join('');
  return `<div class="box roster-box"><div class="table-scroll roster-scroll"><table class="data-table roster-matrix"><thead><tr><th>番号</th><th>選手</th><th>よみ</th>${header.map(x=>`<th>${x}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></div></div>`;
@@ -123,7 +123,7 @@ function rosterRowState(tr){
  const active=!!tr.querySelector('[data-roster-name]').value.trim();
  tr.classList.toggle('roster-inactive',!active);
  tr.querySelector('[data-roster-kana]').disabled=!active;
- tr.querySelectorAll('[data-roster-event]').forEach(select=>select.disabled=!active);
+ tr.querySelectorAll('[data-roster-event]').forEach(checkbox=>checkbox.disabled=!active);
 }
 function rosterNameChange(input){
  const tr=input.closest('[data-roster-id]'),id=Number(tr.dataset.rosterId);
@@ -136,7 +136,7 @@ function rosterNameChange(input){
   }
   if(p)ed().players=ed().players.filter(x=>x.id!==id);
   tr.querySelector('[data-roster-kana]').value='';
-  tr.querySelectorAll('[data-roster-event]').forEach(select=>select.value='');
+  tr.querySelectorAll('[data-roster-event]').forEach(checkbox=>checkbox.checked=false);
  }else if(p){p.name=name;}else{
   ed().players.push({id,name,kana:tr.querySelector('[data-roster-kana]').value.trim(),entries:[]});
  }
@@ -149,11 +149,11 @@ function rosterKanaChange(input){
  if(!p)return;
  p.kana=input.value.trim();input.value=p.kana;save();
 }
-function rosterEventChange(select){
- const id=Number(select.closest('[data-roster-id]').dataset.rosterId),p=player(id);
- if(!p || !p.name.trim()){select.value='';return;}
- const event=select.dataset.rosterEvent,entries=new Set(p.entries||[]);
- if(select.value==='attend')entries.add(event);else entries.delete(event);
+function rosterEventChange(checkbox){
+ const id=Number(checkbox.closest('[data-roster-id]').dataset.rosterId),p=player(id);
+ if(!p || !p.name.trim()){checkbox.checked=false;return;}
+ const event=checkbox.dataset.rosterEvent,entries=new Set(p.entries||[]);
+ if(checkbox.checked)entries.add(event);else entries.delete(event);
  p.entries=eventIds.filter(x=>entries.has(x));save();
 }
 

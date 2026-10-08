@@ -224,10 +224,6 @@ html{scroll-padding-top:100px}
 }
 
 /* v13: Assigned opponents are hidden from the candidate matrix. */
-.pending-pairings{margin-top:18px;padding-top:12px;border-top:1px solid #e3ebe6}
-.pending-title{font-size:12px;font-weight:700;color:#51645d;margin-bottom:8px}
-.pending-pair{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:6px 0;border-bottom:1px solid #edf1ee;font-size:12px}
-.pending-pair>span{overflow-wrap:anywhere}
 .opponent-no:focus-visible{outline:2px solid #075b4a;outline-offset:2px}
 
 
@@ -307,7 +303,3 @@ html{scroll-padding-top:100px}
   .header-controls .header-json{order:1}
 }
 
-/* v15: Pending matches match the pairing section's heading and player typography. */
-.pending-pairings .pending-title{font-size:15px;font-weight:700;line-height:1.55;color:#1d302d;margin:0 0 14px}
-.pending-pairings .pending-pair{font-size:14px}
-.pending-pairings .pending-pair>span{font-weight:600}

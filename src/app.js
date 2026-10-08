@@ -59,9 +59,7 @@ function pairingTable(pairs){
  for(const pair of pairs){groups.get(pair.a)?.push(pair.b);groups.get(pair.b)?.push(pair.a)}
  const filtered=[...groups];
  const list=filtered.length?`<table class="data-table pairing-list"><thead><tr><th>対戦待ち</th><th>未対戦</th></tr></thead><tbody>${filtered.map(([id,opps])=>`<tr><td class="pairing-name">${esc(playerLabel(id))}</td><td><div class="opponents">${opps.length?opps.sort((a,b)=>a-b).map(n=>`<button type="button" class="opponent-no" data-action="pick-pair" data-a="${id}" data-b="${n}" title="${esc(player(n)?.name||playerLabel(n))}" aria-label="${esc(playerLabel(n))}と対戦を組む">${n}</button>`).join(''):'<span class="muted">ー</span>'}</div></td></tr>`).join('')}</tbody></table>`:`<div class="empty">${seen.size?'斡旋できる選手がいません':'結果が登録された選手はいません'}</div>`;
- const reservations=busy;
- const ongoing=reservations.length?`<div class="pending-pairings"><h3 class="pending-title">対戦中</h3>${reservations.map(p=>`<div class="pending-pair"><span>${esc(playerLabel(p.a))} ― ${esc(playerLabel(p.b))}</span><button type="button" class="btn small" data-action="cancel-pair" data-a="${p.a}" data-b="${p.b}">取消</button></div>`).join('')}</div>`:'';
- return list+ongoing;
+ return list;
 }
 function matchPlayerField(side,id,label,winningSide){
  const selected=winningSide===side,other=winningSide&&winningSide!==side;

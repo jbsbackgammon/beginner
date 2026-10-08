@@ -111,6 +111,20 @@ function outcomeButton(side,winningSide){
  const selected=winningSide===side,other=['a','b'].includes(winningSide)&&!selected;
  return `<button type="button" data-winner-button="${side}" class="winner-button ${selected?'win':other?'lose':''}" aria-pressed="${selected}">${other?'負':'勝'}</button>`;
 }
+// 2pt scores are restricted to the selected outcome, independently of player selection.
+function twoScoreOptions(winner, selected=''){
+ const scores={a:['2-0','2-1'],b:['0-2','1-2'],draw:['1-1']}[winner]||[];
+ const current=winner==='draw'?'1-1':selected;
+ return `${winner==='draw'?'':'<option value="">得点を選択</option>'}${scores.map(score=>`<option value="${score}" ${score===current?'selected':''}>${score}</option>`).join('')}`;
+}
+function syncTwoScoreOptions(form){
+ if(form.dataset.kind!=='two')return;
+ const select=form.elements.namedItem('result');if(!select)return;
+ const chosen=select.value;
+ select.innerHTML=twoScoreOptions(form.dataset.winner,chosen);
+ // For a draw the only allowed score is 1-1, including before player selection.
+ if(form.dataset.winner==='draw')select.value='1-1';
+}
 function renderEntry(){
  const e=eventById(activeEvent),matches=resultsFor(activeEvent),current=editingMatch?ed().matches.find(x=>x.id===editingMatch):null;
  const first=current?.a||preselectedPair?.a||null,second=current?.b||preselectedPair?.b||null;
@@ -119,7 +133,7 @@ function renderEntry(){
  const twoScore=current?`${current.sa}-${current.sb}`:'';
  const pts=e.kind==='cube'?[1,2,3,4,6,8,12]:[1,2,3];
  const pointsLabel=e.kind==='points'?{1:'1-0 シングル勝ち',2:'2-0 ギャモン勝ち',3:'3-0 バックギャモン勝ち'}:Object.fromEntries(pts.map(n=>[n,`${n}-0`]));
- const resultControl=e.kind==='two'?`<label class="field result-score"><select name="result" aria-label="得点" required disabled><option value="">得点を選択</option>${['2-0','2-1','1-1','1-2','0-2'].map(x=>`<option value="${x}" ${twoScore===x?'selected':''}>${x}</option>`).join('')}</select></label>`:`<label class="field result-score"><select name="points" aria-label="得点" required disabled><option value="">得点を選択</option>${pts.map(n=>`<option value="${n}" ${current&&Math.max(current.sa,current.sb)===n?'selected':''}>${pointsLabel[n]}</option>`).join('')}</select></label>`;
+ const resultControl=e.kind==='two'?`<label class="field result-score"><select name="result" aria-label="得点" required disabled>${twoScoreOptions(winningSide,twoScore)}</select></label>`:`<label class="field result-score"><select name="points" aria-label="得点" required disabled><option value="">得点を選択</option>${pts.map(n=>`<option value="${n}" ${current&&Math.max(current.sa,current.sb)===n?'selected':''}>${pointsLabel[n]}</option>`).join('')}</select></label>`;
  const addable=availableWaitingPlayers(ed(),activeEvent);
  const addControl=`<div class="pairing-add"><select id="pair-add-player" aria-label="対戦待ちに追加する選手番号" ${addable.length?'':'disabled'}><option value="">選手選択</option>${addable.map(p=>`<option value="${p.id}">${esc(`${p.name} #${p.id}`)}</option>`).join('')}</select><button type="button" class="btn small" data-action="add-waiting" ${addable.length?'':'disabled'}>追加</button></div>`;
  const pairs=unplayedPairs(ed(),activeEvent);
@@ -154,6 +168,7 @@ function setWinner(form,side){
  });
  const draw=form.querySelector('[data-draw-button]');
  if(draw){draw.classList.toggle('selected',side==='draw');draw.setAttribute('aria-pressed',String(side==='draw'));}
+ syncTwoScoreOptions(form);
  updateSubmitEnabled(form);
 }
 // Keep each player's name dropdown free of the opponent's current selection.
@@ -186,7 +201,7 @@ function syncMatchPlayer(el){
   form.dataset.playerPair=pair;
   if(hadPair)setWinner(form,'a');
   const score=form.elements.namedItem('result')||form.elements.namedItem('points');
-  if(score)score.value='';
+  if(score)score.value=form.dataset.kind==='two'&&form.dataset.winner==='draw'?'1-1':'';
  }
  updateSubmitEnabled(form);
 }

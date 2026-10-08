@@ -5,6 +5,7 @@ export const EVENTS = [
   { id: 'day3', label: '初級戦Day3', short: 'Day3', date: '2026-10-12', kind: 'points' },
   { id: 'two', label: '2ポイントマッチラウンドロビン', short: '2pt RR', date: '2026-10-10', kind: 'two' },
   { id: 'cube', label: 'キューブ有ラウンドロビン', short: 'キューブ有RR', date: '2026-10-11', kind: 'cube' },
+  { id: 'school', label: '小学生選手権', short: '小学生選手権', date: '', kind: 'points' },
 ];
 export const eventById = (id) => EVENTS.find(e => e.id === id);
 export const allowedCubePoints = [1,2,3,4,6,8,12];
@@ -153,6 +154,9 @@ export function availableWaitingPlayers(edition, eventId) {
 export function addWaitingPlayer(edition, eventId, id) {
   if (!eventById(eventId) || eventId==='overall') return false;
   if (!availableWaitingPlayers(edition,eventId).some(p=>p.id===id)) return false;
+  // Re-adding a reserved player without cancelling the reservation creates a
+  // hidden "waiting" entry. The UI must cancel the reservation explicitly.
+  if (activePairings(edition,eventId).some(p=>p.a===id||p.b===id)) return false;
   const ids=waitingPlayerIds(edition,eventId);
   if (ids.includes(id)) return false;
   storeWaiting(edition,eventId,[...ids,id]);

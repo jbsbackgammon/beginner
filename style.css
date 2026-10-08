@@ -672,3 +672,31 @@ html{scroll-padding-top:100px}
   }
   .history-table tbody td.row-actions {justify-content:center!important}
 }
+
+/* v26: ranking position centering, destructive control, and sixth tournament. */
+@media screen {
+  .standings-table td.standings-rank,
+  .standings-table tbody td:first-child,
+  .report-data-table tbody td.standings-rank {
+    text-align:center!important;
+  }
+  .header-json-button.header-delete {
+    border-color:#ffc3bd;
+    color:#a92d35;
+    background:#fff;
+  }
+  .header-json-button.header-delete:hover {background:#fff1ef}
+  .roster-matrix th:nth-child(n+4),
+  .roster-matrix td:nth-child(n+4){width:auto}
+}
+@media screen and (max-width:1100px) {
+  .standings-table tbody td.standings-rank,
+  .standings-table tbody td:first-child,
+  .report-data-table tbody td.standings-rank {
+    align-items:center;
+    text-align:center!important;
+  }
+}
+@media print {
+  .report-data-table tbody td.standings-rank{text-align:center!important}
+}

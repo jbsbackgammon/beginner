@@ -30,8 +30,9 @@ test('only an entered, non-waiting player can be added; reserved players reappea
  assert.deepEqual(waitingPlayerIds(e,'day1'),[2,3,4]);
  assert.deepEqual(availableWaitingPlayers(e,'day1').map(p=>p.id),[1,5]);
  assert.equal(unplayedPairs(e,'day1').some(p=>p.a===1||p.b===1||p.a===5||p.b===5),false);
- assert.equal(addWaitingPlayer(e,'day1',1),true); // queue a reserved player without a second assignment
- assert.deepEqual(availableWaitingPlayers(e,'day1').map(p=>p.id),[5]);
+ assert.equal(addWaitingPlayer(e,'day1',1),false); // never insert a busy player invisibly
+ assert.deepEqual(waitingPlayerIds(e,'day1'),[2,3,4]);
+ assert.deepEqual(availableWaitingPlayers(e,'day1').map(p=>p.id),[1,5]);
  assert.equal(cancelPairing(e,'day1',1,5),true);
  assert.deepEqual(waitingPlayerIds(e,'day1'),[1,2,3,4,5]);
  assert.deepEqual(availableWaitingPlayers(e,'day1'),[]);
@@ -84,13 +85,25 @@ test('old pending data is migrated so assigned players return to the selection d
  migrateReservedWaiting(e);
  assert.deepEqual(waitingPlayerIds(e,'day1'),[3]);
  assert.deepEqual(availableWaitingPlayers(e,'day1').map(p=>p.id),[1,2]);
- assert.equal(addWaitingPlayer(e,'day1',1),true);
- migrateReservedWaiting(e); // idempotent: do not erase a newly queued reserved player
- assert.deepEqual(waitingPlayerIds(e,'day1'),[1,3]);
- assert.deepEqual(availableWaitingPlayers(e,'day1').map(p=>p.id),[2]);
+ assert.equal(addWaitingPlayer(e,'day1',1),false);
+ migrateReservedWaiting(e); // idempotent: cannot accidentally queue a reserved player
+ assert.deepEqual(waitingPlayerIds(e,'day1'),[3]);
+ assert.deepEqual(availableWaitingPlayers(e,'day1').map(p=>p.id),[1,2]);
  assert.deepEqual(unplayedPairs(e,'day1'),[]);
  assert.equal(cancelPairing(e,'day1',1,2),true);
  assert.deepEqual(waitingPlayerIds(e,'day1'),[1,2,3]);
+});
+test('elementary championship attendance is independent of beginner days',()=>{
+ const e={players:[
+  {id:1,name:'A',entries:['school']},
+  {id:2,name:'B',entries:['school','day1']},
+  {id:3,name:'C',entries:['day1']},
+ ],matches:[]};
+ assert.deepEqual(availableWaitingPlayers(e,'school').map(x=>x.id),[1,2]);
+ assert.equal(addWaitingPlayer(e,'school',1),true);
+ assert.equal(addWaitingPlayer(e,'school',2),true);
+ assert.deepEqual(unplayedPairs(e,'school').map(x=>[x.a,x.b]),[[1,2]]);
+ assert.deepEqual(waitingPlayerIds(e,'day1'),[]);
 });
 
 test('legacy pending without an explicit waitlist retains only unassigned played players',()=>{

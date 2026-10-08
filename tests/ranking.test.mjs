@@ -12,7 +12,7 @@ test('same official rank for exact ties',()=>{const e=fixture([{event:'day1',a:1
 
 import {unplayedPairs,EVENTS} from '../src/ranking.mjs';
 test('event order begins with overall and matchups only include active participants who have not met', () => {
-  assert.deepEqual(EVENTS.map(x=>x.id), ['overall','day1','day2','day3','two','cube']);
+  assert.deepEqual(EVENTS.map(x=>x.id), ['overall','day1','day2','day3','two','cube','school']);
   const edition={players:[1,2,3,4].map(id=>({id,name:'P'+id})),matches:[
     {id:'m1',event:'day1',a:1,b:2,sa:1,sb:0},
     {id:'m2',event:'day1',a:2,b:3,sa:2,sb:0},
@@ -21,6 +21,16 @@ test('event order begins with overall and matchups only include active participa
   assert.deepEqual(unplayedPairs(edition,'day1').map(x=>[x.a,x.b]), [[1,3]]);
   assert.deepEqual(unplayedPairs(edition,'overall'), []);
   assert.deepEqual(unplayedPairs(edition,'day2'), []);
+});
+test('elementary championship uses single-game 1/2/3 scoring and independent ranking',()=>{
+  const e=fixture([{event:'school',a:1,b:2,sa:3,sb:0},{event:'school',a:3,b:1,sa:1,sb:0}]);
+  assert.equal(validMatch({event:'school',a:1,b:2,sa:3,sb:0},new Set([1,2,3])),'');
+  assert.ok(validMatch({event:'school',a:1,b:2,sa:4,sb:0},new Set([1,2,3])));
+  const r=standings(e,'school');
+  assert.equal(r[0].id,1);
+  assert.equal(r[0].diff,2);
+  assert.equal(r[0].matches,2);
+  assert.equal(standings(e,'overall').length,0);
 });
 test('repeat results do not create duplicate matchmaking candidates', () => {
   const edition={players:[1,2,3].map(id=>({id,name:String(id)})),matches:[

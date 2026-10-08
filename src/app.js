@@ -37,8 +37,19 @@ function resultsFor(event){return ed().matches.filter(x=>x.event===event)}
 function side(m){return m.sa===m.sb?'引き分け':(m.sa>m.sb ? playerLabel(m.a):playerLabel(m.b))}
 function historyTable(matches) {
  const shown=matches.filter(m=>!historySearch||`${playerLabel(m.a)} ${playerLabel(m.b)}`.toLocaleLowerCase().includes(historySearch.toLocaleLowerCase())).slice().reverse().slice(0,80);
- return shown.length?`<table class="data-table history-table"><colgroup><col class="history-col-player"><col class="history-col-score"><col class="history-col-player"><col class="history-col-actions"></colgroup><thead><tr><th>選手名</th><th>結果</th><th>選手名</th><th>操作</th></tr></thead><tbody>${shown.map(m=>`<tr><td class="history-name">${esc(player(m.a)?.name||`#${m.a}`)}</td><td class="history-score">${m.sa} - ${m.sb}</td><td class="history-name">${esc(player(m.b)?.name||`#${m.b}`)}</td><td class="row-actions"><button class="btn small" data-action="edit-match" data-id="${esc(m.id)}">修正</button> <button class="btn small danger" data-action="delete-match" data-id="${esc(m.id)}">削除</button></td></tr>`).join('')}</tbody></table>`:'<div class="empty">該当する試合がありません</div>';
+ const rows=shown.map(m=>{
+  // Keep the original result untouched for correction and ranking calculation.
+  const draw=m.sa===m.sb;
+  const firstIsA=draw ? m.a<=m.b : m.sa>m.sb;
+  const leftId=firstIsA?m.a:m.b,rightId=firstIsA?m.b:m.a;
+  const leftScore=firstIsA?m.sa:m.sb,rightScore=firstIsA?m.sb:m.sa;
+  const leftClass=draw?'history-score-draw':'history-score-win';
+  const rightClass=draw?'history-score-draw':'';
+  return `<tr><td class="history-name">${esc(playerLabel(leftId))}</td><td class="history-score"><span class="${leftClass}">${esc(leftScore)}</span><span class="history-score-separator"> - </span><span class="${rightClass}">${esc(rightScore)}</span></td><td class="history-name">${esc(playerLabel(rightId))}</td><td class="row-actions"><button class="btn small" data-action="edit-match" data-id="${esc(m.id)}">修正</button> <button class="btn small danger" data-action="delete-match" data-id="${esc(m.id)}">削除</button></td></tr>`;
+ }).join('');
+ return shown.length?`<table class="data-table history-table"><colgroup><col class="history-col-player"><col class="history-col-score"><col class="history-col-player"><col class="history-col-actions"></colgroup><thead><tr><th>選手名</th><th>結果</th><th>選手名</th><th>操作</th></tr></thead><tbody>${rows}</tbody></table>`:'<div class="empty">該当する試合がありません</div>';
 }
+
 function pairingTable(pairs){
  const completed=resultsFor(activeEvent),busy=activePairings(ed(),activeEvent);
  const seen=new Set(),groups=new Map();
@@ -49,7 +60,7 @@ function pairingTable(pairs){
  const filtered=[...groups];
  const list=filtered.length?`<table class="data-table pairing-list"><thead><tr><th>対戦待ち</th><th>未対戦</th></tr></thead><tbody>${filtered.map(([id,opps])=>`<tr><td class="pairing-name">${esc(playerLabel(id))}</td><td><div class="opponents">${opps.length?opps.sort((a,b)=>a-b).map(n=>`<button type="button" class="opponent-no" data-action="pick-pair" data-a="${id}" data-b="${n}" title="${esc(player(n)?.name||playerLabel(n))}" aria-label="${esc(playerLabel(n))}と対戦を組む">${n}</button>`).join(''):'<span class="muted">ー</span>'}</div></td></tr>`).join('')}</tbody></table>`:`<div class="empty">${seen.size?'斡旋できる選手がいません':'結果が登録された選手はいません'}</div>`;
  const reservations=busy;
- const ongoing=reservations.length?`<div class="pending-pairings"><div class="pending-title">対戦中（結果待ち）</div>${reservations.map(p=>`<div class="pending-pair"><span>${esc(playerLabel(p.a))} ― ${esc(playerLabel(p.b))}</span><button type="button" class="btn small" data-action="cancel-pair" data-a="${p.a}" data-b="${p.b}">取消</button></div>`).join('')}</div>`:'';
+ const ongoing=reservations.length?`<div class="pending-pairings"><h3 class="pending-title">対戦中</h3>${reservations.map(p=>`<div class="pending-pair"><span>${esc(playerLabel(p.a))} ― ${esc(playerLabel(p.b))}</span><button type="button" class="btn small" data-action="cancel-pair" data-a="${p.a}" data-b="${p.b}">取消</button></div>`).join('')}</div>`:'';
  return list+ongoing;
 }
 function matchPlayerField(side,id,label,winningSide){
@@ -120,7 +131,10 @@ function renderPlayers(){
  const header=['初級戦Day1','初級戦Day2','初級戦Day3','2ptマッチRR','キューブ有RR'];
  const rows=numbers.map(id=>{
   const p=byId.get(id),active=!!p?.name?.trim();
-  const cells=eventIds.map((event,i)=>`<td><input type="checkbox" aria-label="No.${id} ${header[i]} 出場" data-roster-event="${event}" ${p?.entries?.includes(event)?'checked':''} ${active?'':'disabled'}></td>`).join('');
+  const cells=eventIds.map((event,i)=>{
+   const attending=!!p?.entries?.includes(event);
+   return `<td><button type="button" class="roster-attendance ${attending?'attending':''}" data-roster-event="${event}" aria-pressed="${attending}" aria-label="No.${id} ${header[i]} ${attending?'出場':'未出場'}" ${active?'':'disabled'}>${attending?'出場':'ー'}</button></td>`;
+  }).join('');
   return `<tr data-roster-id="${id}" class="${active?'':'roster-inactive'}"><td class="roster-no">${id}</td><td><input type="text" data-roster-name aria-label="No.${id} 選手" autocomplete="off" maxlength="100" value="${esc(p?.name||'')}"></td><td><input type="text" data-roster-kana aria-label="No.${id} よみ" autocomplete="off" maxlength="100" value="${esc(p?.kana||'')}" ${active?'':'disabled'}></td>${cells}</tr>`;
  }).join('');
  return `<div class="box roster-box"><div class="table-scroll roster-scroll"><table class="data-table roster-matrix"><thead><tr><th>番号</th><th>選手</th><th>よみ</th>${header.map(x=>`<th>${x}</th>`).join('')}</tr></thead><tbody>${rows}</tbody></table></div></div>`;
@@ -129,7 +143,7 @@ function rosterRowState(tr){
  const active=!!tr.querySelector('[data-roster-name]').value.trim();
  tr.classList.toggle('roster-inactive',!active);
  tr.querySelector('[data-roster-kana]').disabled=!active;
- tr.querySelectorAll('[data-roster-event]').forEach(checkbox=>checkbox.disabled=!active);
+ tr.querySelectorAll('[data-roster-event]').forEach(button=>button.disabled=!active);
 }
 function rosterNameChange(input){
  const tr=input.closest('[data-roster-id]'),id=Number(tr.dataset.rosterId);
@@ -142,7 +156,7 @@ function rosterNameChange(input){
   }
   if(p)ed().players=ed().players.filter(x=>x.id!==id);
   tr.querySelector('[data-roster-kana]').value='';
-  tr.querySelectorAll('[data-roster-event]').forEach(checkbox=>checkbox.checked=false);
+  tr.querySelectorAll('[data-roster-event]').forEach(button=>{button.setAttribute('aria-pressed','false');button.classList.remove('attending');button.textContent='ー';button.setAttribute('aria-label',button.getAttribute('aria-label').replace(/ (出場|未出場)$/,' 未出場'));});
  }else if(p){p.name=name;}else{
   ed().players.push({id,name,kana:tr.querySelector('[data-roster-kana]').value.trim(),entries:[]});
  }
@@ -155,12 +169,18 @@ function rosterKanaChange(input){
  if(!p)return;
  p.kana=input.value.trim();input.value=p.kana;save();
 }
-function rosterEventChange(checkbox){
- const id=Number(checkbox.closest('[data-roster-id]').dataset.rosterId),p=player(id);
- if(!p || !p.name.trim()){checkbox.checked=false;return;}
- const event=checkbox.dataset.rosterEvent,entries=new Set(p.entries||[]);
- if(checkbox.checked)entries.add(event);else entries.delete(event);
- p.entries=eventIds.filter(x=>entries.has(x));save();
+function rosterEventChange(button){
+ const id=Number(button.closest('[data-roster-id]').dataset.rosterId),p=player(id);
+ if(!p || !p.name.trim())return;
+ const event=button.dataset.rosterEvent,entries=new Set(p.entries||[]);
+ const attending=button.getAttribute('aria-pressed')!=='true';
+ if(attending)entries.add(event);else entries.delete(event);
+ p.entries=eventIds.filter(x=>entries.has(x));
+ button.setAttribute('aria-pressed',String(attending));
+ button.classList.toggle('attending',attending);
+ button.textContent=attending?'出場':'ー';
+ button.setAttribute('aria-label',`No.${id} ${eventById(event).label} ${attending?'出場':'未出場'}`);
+ save();
 }
 
 function reportHTML(id){const e=eventById(id);const rows=standings(ed(),id);const date=id==='overall'? dateFor('day3'):dateFor(id);const isTwo=id==='two',overall=id==='overall';
@@ -226,11 +246,12 @@ function onAction(action,id){switch(action){
  case 'csv':download(`beginner_${activeEvent}_${timestamp()}.csv`,asCSV(activeEvent),'text/csv;charset=utf-8');break;
  }}
 document.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',()=>{tab=b.dataset.tab;editingMatch=null;editingEntries=null;render()}));
+document.querySelectorAll('[data-header-action]').forEach(b=>b.addEventListener('click',()=>onAction(b.dataset.headerAction)));
 renderHeaderEvent();
 $('header-event').addEventListener('change',e=>{activeEvent=e.target.value;editingMatch=null;preselectedPair=null;historySearch='';render()});
 $('app').addEventListener('submit',e=>{if(e.target.id==='match-form'){e.preventDefault();matchSave(e.target)}else if(e.target.id==='entries-form'){e.preventDefault();entriesSave(e.target)}else if(e.target.id==='dates-form'){e.preventDefault();const f=new FormData(e.target);ed().dates={};for(const id of eventIds)if(f.get(id))ed().dates[id]=String(f.get(id));ed().dates.overall=ed().dates.day3||'';save();render();notice('大会の日付を保存しました。')}});
-$('app').addEventListener('change',e=>{if(e.target.id==='edition-picker'){data.activeEditionId=e.target.value;activeEvent='day1';$('header-event').value='day1';editingMatch=null;editingEntries=null;save();render()}else if(e.target.id==='edition-name-input'){const name=e.target.value.trim();if(!name){e.target.value=ed().name;return}ed().name=name;save();render();notice('大会名を保存しました。')}else if(e.target.matches('[data-match-side]')){syncMatchPlayer(e.target)}else if(e.target.name==='result'&&e.target.closest('#match-form')){const score=e.target.value;setWinner(e.target.closest('#match-form'),score==='1-1'?'':score==='2-0'||score==='2-1'?'a':score==='0-2'||score==='1-2'?'b':'')}else if(e.target.id==='entries-player'){editingEntries=e.target.value?Number(e.target.value):null;render()}else if(e.target.matches('[data-roster-name]')){rosterNameChange(e.target)}else if(e.target.matches('[data-roster-kana]')){rosterKanaChange(e.target)}else if(e.target.matches('[data-roster-event]')){rosterEventChange(e.target)}});
-$('app').addEventListener('click',e=>{const attendance=e.target.closest('[data-entry-toggle]');if(attendance){toggleAttendance(attendance);return}const win=e.target.closest('[data-winner-button]');if(win){const form=win.closest('#match-form');setWinner(form,form.dataset.winner===win.dataset.winnerButton?'':win.dataset.winnerButton);return}const b=e.target.closest('[data-action]');if(!b)return;if(b.dataset.action==='pick-pair'){
+$('app').addEventListener('change',e=>{if(e.target.id==='edition-picker'){data.activeEditionId=e.target.value;activeEvent='day1';$('header-event').value='day1';editingMatch=null;editingEntries=null;save();render()}else if(e.target.id==='edition-name-input'){const name=e.target.value.trim();if(!name){e.target.value=ed().name;return}ed().name=name;save();render();notice('大会名を保存しました。')}else if(e.target.matches('[data-match-side]')){syncMatchPlayer(e.target)}else if(e.target.name==='result'&&e.target.closest('#match-form')){const score=e.target.value;setWinner(e.target.closest('#match-form'),score==='1-1'?'':score==='2-0'||score==='2-1'?'a':score==='0-2'||score==='1-2'?'b':'')}else if(e.target.id==='entries-player'){editingEntries=e.target.value?Number(e.target.value):null;render()}else if(e.target.matches('[data-roster-name]')){rosterNameChange(e.target)}else if(e.target.matches('[data-roster-kana]')){rosterKanaChange(e.target)}});
+$('app').addEventListener('click',e=>{const rosterToggle=e.target.closest('[data-roster-event]');if(rosterToggle){rosterEventChange(rosterToggle);return}const attendance=e.target.closest('[data-entry-toggle]');if(attendance){toggleAttendance(attendance);return}const win=e.target.closest('[data-winner-button]');if(win){const form=win.closest('#match-form');setWinner(form,form.dataset.winner===win.dataset.winnerButton?'':win.dataset.winnerButton);return}const b=e.target.closest('[data-action]');if(!b)return;if(b.dataset.action==='pick-pair'){
  const a=Number(b.dataset.a),c=Number(b.dataset.b);
  if(!unplayedPairs(ed(),activeEvent).some(p=>p.a===Math.min(a,c)&&p.b===Math.max(a,c))){notice('この組み合わせは斡旋できません。');render();return}
  if(!confirm(`${playerLabel(a)} と ${playerLabel(c)} の対戦を組みますか？`))return;

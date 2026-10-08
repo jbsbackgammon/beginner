@@ -30,10 +30,13 @@
 .roster-matrix tr.roster-inactive [data-roster-name]{background:#fff}
 @media(max-width:850px){.roster-box{padding:8px}.roster-scroll{max-height:calc(100vh - 170px)}}
 
-/* A checked box marks attendance; inactive/unchecked cells remain neutral. */
-.roster-matrix input[type="checkbox"][data-roster-event]{display:block;width:19px;height:19px;min-width:19px;margin:3px auto;cursor:pointer;accent-color:#be9840}
-.roster-matrix input[type="checkbox"][data-roster-event]:disabled{cursor:not-allowed;opacity:.4}
-.roster-matrix td:has(> input[data-roster-event]:checked){background:#fff5c7}
+/* v15: Equal-size attendance buttons for each player and event. */
+.roster-matrix td:has(> .roster-attendance){text-align:center}
+.roster-matrix .roster-attendance{display:inline-flex;align-items:center;justify-content:center;vertical-align:middle;width:62px;height:32px;min-width:62px;padding:0 3px;border:1px solid #cbd9d2;border-radius:6px;background:#fff;color:#82908a;font-size:12px;font-weight:700}
+.roster-matrix .roster-attendance.attending{background:#fff5c7;border-color:#e3c872;color:#584b1f}
+.roster-matrix td:has(> .roster-attendance.attending){background:#fff5c7}
+.roster-matrix .roster-attendance:disabled{cursor:not-allowed;opacity:.45}
+.roster-matrix .roster-attendance:focus-visible{outline:2px solid #92bdab;outline-offset:2px}
 
 
 /* v9: page navigation at header left; tournament selector at header right. */
@@ -275,3 +278,36 @@ html{scroll-padding-top:100px}
   }
   .entry-form .match-versus{font-size:11px}
 }
+
+/* v15: Action header left-aligned; winner's score red, drawn scores green. */
+.history-table th:last-child{text-align:left}
+.history-score-win{color:#be3535}
+.history-score-draw{color:#187a48}
+
+/* v15: Global JSON tools immediately follow the right-hand tournament selector. */
+.header-controls{display:flex;align-items:center;justify-content:flex-end;gap:8px;margin-left:auto;min-width:0}
+.header-controls .header-event{margin-left:0;min-width:220px}
+.header-json{display:flex;align-items:center;gap:6px;flex-shrink:0}
+.header-json-button{display:inline-flex;align-items:center;justify-content:center;height:37px;padding:0 10px;border:1px solid #a5c8bb;border-radius:6px;background:#fff;color:#075b4a;font-size:12px;font-weight:700;white-space:nowrap;cursor:pointer}
+.header-json-button:hover{background:#eef9f2}
+.header-json-button:focus-visible{outline:2px solid #fff;outline-offset:2px}
+@media(max-width:1080px){
+  .header-controls{flex:0 1 auto;margin-left:auto}
+  .header-controls .header-event{min-width:165px;width:auto}
+}
+@media(max-width:610px){
+  .header-controls{order:2;width:100%;justify-content:flex-end;flex-wrap:wrap;gap:6px;margin-left:0}
+  .header-controls .header-event{flex:1 1 145px;min-width:145px;max-width:none}
+  .header-controls .header-event select{max-width:none}
+  .header-json-button{height:36px;padding:0 8px;font-size:11px}
+}
+@media(max-width:610px){
+  /* Earlier mobile rules set order on the selector itself; override inside the toolbar. */
+  .header-controls .header-event{order:0}
+  .header-controls .header-json{order:1}
+}
+
+/* v15: Pending matches match the pairing section's heading and player typography. */
+.pending-pairings .pending-title{font-size:15px;font-weight:700;line-height:1.55;color:#1d302d;margin:0 0 14px}
+.pending-pairings .pending-pair{font-size:14px}
+.pending-pairings .pending-pair>span{font-weight:600}

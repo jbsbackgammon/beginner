@@ -137,11 +137,20 @@ function storeWaiting(edition, eventId, ids) {
   edition.waitingPlayers[eventId]=[...new Set(ids)].sort((a,b)=>a-b);
 }
 
-/** Add any registered, currently unassigned player to the event waiting list. */
+/** All participants entered in this event who are not already waiting or assigned. */
+export function availableWaitingPlayers(edition, eventId) {
+  if (!eventById(eventId) || eventId==='overall') return [];
+  const waiting=new Set(waitingPlayerIds(edition,eventId));
+  const busy=new Set(activePairings(edition,eventId).flatMap(p=>[p.a,p.b]));
+  return (edition.players||[])
+    .filter(p=>p.entries?.includes(eventId)&&!waiting.has(p.id)&&!busy.has(p.id))
+    .sort((a,b)=>a.id-b.id);
+}
+
+/** Add only a registered participant who is neither waiting nor assigned. */
 export function addWaitingPlayer(edition, eventId, id) {
   if (!eventById(eventId) || eventId==='overall') return false;
-  if (!(edition.players||[]).some(p=>p.id===id)) return false;
-  if (activePairings(edition,eventId).some(p=>p.a===id||p.b===id)) return false;
+  if (!availableWaitingPlayers(edition,eventId).some(p=>p.id===id)) return false;
   const ids=waitingPlayerIds(edition,eventId);
   if (ids.includes(id)) return false;
   storeWaiting(edition,eventId,[...ids,id]);

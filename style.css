@@ -434,3 +434,16 @@ html{scroll-padding-top:100px}
   .pairing-add select{min-width:0}
   .tabs button{padding-inline:3px}
 }
+
+
+/* v21: Center the text in every visible table heading cell. */
+.data-table thead th,.report table thead th{text-align:center!important}
+/* Card layout at narrow widths uses this text instead of a real column heading. */
+@media screen and (max-width:700px){
+  .pairing-list td:nth-child(2)::before{content:'未対戦相手'}
+}
+
+
+/* v21: compact result action / compact inline history search. */
+.entry-form .result-row button[type=submit]{width:50%;justify-self:start}
+.history-title #history-filter{width:50%;max-width:50%;flex:0 1 50%}

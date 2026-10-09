@@ -1578,3 +1578,15 @@ html{scroll-padding-top:100px}
     print-color-adjust:exact;
   }
 }
+
+/* v65: Use black (not green) for adopted Day badges in printed results.
+   Keep the green highlights in the on-screen standings unchanged. */
+@media print {
+  #print-area .report-data-table .adopted-day.is-adopted,
+  #print-area .personal-card .adopted-day.is-adopted {
+    background:#000!important;
+    color:#fff!important;
+    -webkit-print-color-adjust:exact;
+    print-color-adjust:exact;
+  }
+}

@@ -8,7 +8,7 @@ const fnSource=source.match(/function statsTable\(eventId,preview=false\)\{[\s\S
 assert.ok(fnSource,'statsTable source not found');
 const row={rank:1,id:9,name:'け',matches:14,wins:9,losses:5,draws:0,spread:4,rate:9/14,scored:19,conceded:6,diff:13,selectedDays:['day1','day3']};
 const statsTable=runInNewContext(`${fnSource}\nstatsTable`,{
- standings:()=>[row],ed:()=>({}),esc:s=>String(s),formatRate:n=>String(n),adoptedDayIcons:()=>'<span class="adopted-days">①②③</span>',
+ standingsWithUnranked:()=>[row],ed:()=>({}),esc:s=>String(s),formatRate:n=>String(n),adoptedDayIcons:()=>'<span class="adopted-days">①②③</span>',
 });
 for(const event of ['overall','day1','two','cube','school']){
  test(`the ${event} ranking widens only the player column; rank is half width`,()=>{

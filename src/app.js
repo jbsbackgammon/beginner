@@ -1,4 +1,4 @@
-import {EVENTS,eventById,validMatch,standings,entryCount,unplayedPairs,arrangeWaitingPair,waitingPlayerIds,availableWaitingPlayers,addWaitingPlayer,removeWaitingPlayer,returnPlayersToWaiting,migrateReservedWaiting,canRegisterSelection,ensureMatchNumbers,nextMatchNumber,historySearchMatches,needsTournamentConfirmation,isEventEntrant,eligibleEventPlayers,createDemoEdition,DEMO_EDITION_ID} from './ranking.mjs';
+import {EVENTS,eventById,validMatch,standings,standingsWithUnranked,entryCount,unplayedPairs,arrangeWaitingPair,waitingPlayerIds,availableWaitingPlayers,addWaitingPlayer,removeWaitingPlayer,returnPlayersToWaiting,migrateReservedWaiting,canRegisterSelection,ensureMatchNumbers,nextMatchNumber,historySearchMatches,needsTournamentConfirmation,isEventEntrant,eligibleEventPlayers,createDemoEdition,DEMO_EDITION_ID} from './ranking.mjs';
 const KEY='jbs-beginner-v1';
 const eventIds=EVENTS.filter(e=>e.id!=='overall').map(e=>e.id);
 const $=id=>document.getElementById(id);
@@ -220,7 +220,7 @@ function syncMatchPlayer(el){
  updateSubmitEnabled(form);
 }
 function statsTable(eventId,preview=false){
- const rows=standings(ed(),eventId),isTwo=eventId==='two',overall=eventId==='overall';
+ const rows=standingsWithUnranked(ed(),eventId),isTwo=eventId==='two',overall=eventId==='overall';
  if(!rows.length)return '<div class="empty">表示できる成績がありません</div>';
  const headers=['順位','選手',isTwo?'③試合':'試合','勝','負',...(isTwo?['引分']:[]),isTwo?'①勝越':'②勝越',isTwo?'②勝率':'③勝率','得点','失点',isTwo?'得失点差':'①得失点差',...(overall?['Day']:[])];
  const displayHeader=h=>{const m=/^([①②③])(.+)$/.exec(h);return m?`<span class="rank-header-label">${esc(m[2])}</span><small class="rank-header-order">ー ${'①②③'.indexOf(m[1])+1} ー</small>`:esc(h);};
@@ -232,7 +232,7 @@ function statsTable(eventId,preview=false){
    td('得点',r.scored),td('失点',r.conceded),td('得失点差',`${r.diff>0?'+':''}${r.diff}`,r.diff>=0?'pos':'neg'),
    ...(overall?[td('Day',adoptedDayIcons(r),'adopted-days-cell')]:[])
   ];
-  return `<tr class="${r.rank<=3?'podium':''}">${cells.join('')}</tr>`;
+  return `<tr class="${r.isUnranked?'is-unranked':r.rank<=3?'podium':''}">${cells.join('')}</tr>`;
  });
  // Only the player column is wider: 1.5 units, rank is half a unit,
  // and every statistics column remains one unit. Total width stays 100%.
@@ -254,9 +254,9 @@ function renderPlayers(){
    const attending=!!p?.entries?.includes(event);
    return `<td data-label="${esc(header[i])}"><button type="button" class="roster-attendance ${attending?'attending':''}" data-roster-event="${event}" aria-pressed="${attending}" aria-label="No.${id} ${header[i]} ${attending?'出場':'未出場'}" ${active?'':'disabled'}>${attending?'出場':'ー'}</button></td>`;
   }).join('');
-  return `<tr data-roster-id="${id}" class="${active?'':'roster-inactive'}"><td class="roster-no" data-label="番号">${id}</td><td data-label="選手"><input type="text" data-roster-name aria-label="No.${id} 選手" autocomplete="off" maxlength="100" value="${esc(p?.name||'')}"></td><td data-label="よみ"><input type="text" data-roster-kana aria-label="No.${id} よみ" autocomplete="off" maxlength="100" value="${esc(p?.kana||'')}" ${active?'':'disabled'}></td><td class="roster-rank-exclusion" data-label="順位対象外"><input type="checkbox" data-roster-rank-excluded aria-label="No.${id} 順位対象外" ${p?.excludeFromRanking===true?'checked':''} ${active?'':'disabled'}></td>${cells}</tr>`;
+  return `<tr data-roster-id="${id}" class="${active?'':'roster-inactive'}"><td class="roster-no" data-label="番号">${id}</td><td data-label="選手"><input type="text" data-roster-name aria-label="No.${id} 選手" autocomplete="off" maxlength="100" value="${esc(p?.name||'')}"></td><td data-label="よみ"><input type="text" data-roster-kana aria-label="No.${id} よみ" autocomplete="off" maxlength="100" value="${esc(p?.kana||'')}" ${active?'':'disabled'}></td><td class="roster-rank-exclusion" data-label="順位外"><input type="checkbox" data-roster-rank-excluded aria-label="No.${id} 順位外" ${p?.excludeFromRanking===true?'checked':''} ${active?'':'disabled'}></td>${cells}</tr>`;
  }).join('');
- return `<div class="box roster-box"><div class="table-scroll roster-scroll"><table class="data-table roster-matrix"><thead><tr><th>番号</th><th>選手</th><th>よみ</th><th>順位対象外</th>${header.map(x=>`<th>${x}</th>`).join('')}</tr></thead><tbody>${rows}</tbody><tfoot><tr class="roster-add-row"><td colspan="${header.length+4}"><button type="button" class="btn" data-action="add-roster-row">次の10行を追加</button></td></tr></tfoot></table></div></div>`;
+ return `<div class="box roster-box"><div class="table-scroll roster-scroll"><table class="data-table roster-matrix"><thead><tr><th>番号</th><th>選手</th><th>よみ</th><th>順位外</th>${header.map(x=>`<th>${x}</th>`).join('')}</tr></thead><tbody>${rows}</tbody><tfoot><tr class="roster-add-row"><td colspan="${header.length+4}"><button type="button" class="btn" data-action="add-roster-row">次の10行を追加</button></td></tr></tfoot></table></div></div>`;
 }
 function rosterRowState(tr){
  const active=!!tr.querySelector('[data-roster-name]').value.trim();
@@ -313,12 +313,12 @@ function rosterEventChange(button){
 }
 
 function reportHTML(id){
- const e=eventById(id),rows=standings(ed(),id),date=id==='overall'?dateFor('day3'):dateFor(id),isTwo=id==='two',overall=id==='overall';
+ const e=eventById(id),rows=standingsWithUnranked(ed(),id),date=id==='overall'?dateFor('day3'):dateFor(id),isTwo=id==='two',overall=id==='overall';
  const headers=['順位','選手',isTwo?'③試合':'試合','勝','負',...(isTwo?['引分']:[]),isTwo?'①勝越':'②勝越',isTwo?'②勝率':'③勝率','得点','失点',isTwo?'得失点差':'①得失点差',...(overall?['Day']:[])];
  const displayHeader=h=>{const m=/^([①②③])(.+)$/.exec(h);return m?`<span class="rank-header-label">${esc(m[2])}</span><small class="rank-header-order">ー ${'①②③'.indexOf(m[1])+1} ー</small>`:esc(h);};
  const tr=rows.map(r=>{
   const vals=[r.rank,esc(`${r.name} #${r.id}`),r.matches,r.wins,r.losses,...(isTwo?[r.draws]:[]),`${r.spread>0?'+':''}${r.spread}`,formatRate(r.rate),r.scored,r.conceded,`${r.diff>0?'+':''}${r.diff}`,...(overall?[adoptedDayIcons(r)]:[])];
-  return `<tr>${vals.map((v,i)=>`<td data-label="${headers[i]}"${i===0?' class="standings-rank"':''}>${v}</td>`).join('')}</tr>`;
+  return `<tr${r.isUnranked?' class="is-unranked"':''}>${vals.map((v,i)=>`<td data-label="${headers[i]}"${i===0?' class="standings-rank"':''}>${v}</td>`).join('')}</tr>`;
  }).join('');
  // The event's statistical columns (from 試合 to the last field) share one width.
  // Increase the player column slightly for full Japanese names.
@@ -444,7 +444,7 @@ function asCSV(id){const isTwo=id==='two',overall=id==='overall';let h=['順位'
  const safe=s=>{const t=String(s??'');return '"'+(typeof s==='string'&&/^[=+\-@\t\r]/.test(t)?"'":'')+t.replaceAll('"','""')+'"'};return '\ufeff'+lines.map(a=>a.map(safe).join(',')).join('\r\n')}
 function download(name,content,type){const blob=new Blob([content],{type}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)}
 function timestamp(){const d=new Date(),pad=x=>String(x).padStart(2,'0');return `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`}
-function normalizeImport(x){if(!x||x.schema!==1||!Array.isArray(x.editions))throw Error('対応するJSON形式ではありません。');const ids=new Set();for(const e of x.editions){if(typeof e.id!=='string'||typeof e.name!=='string'||ids.has(e.id)||!Array.isArray(e.players)||!Array.isArray(e.matches))throw Error('大会データが不正です。');ids.add(e.id);const pids=new Set();for(const p of e.players){if(!Number.isInteger(p.id)||pids.has(p.id)||!String(p.name||'').trim())throw Error('選手マスタに重複・不正値があります。');if(p.excludeFromRanking!==undefined&&typeof p.excludeFromRanking!=='boolean')throw Error('順位対象外の設定が不正です。');pids.add(p.id)}const mids=new Set();for(const m of e.matches){if(typeof m.id!=='string'||mids.has(m.id))throw Error('試合IDの重複があります。');mids.add(m.id);const issue=validMatch(m,pids);if(issue)throw Error(`${e.name}: ${issue}`)} if(e.waitingPlayers!==undefined){
+function normalizeImport(x){if(!x||x.schema!==1||!Array.isArray(x.editions))throw Error('対応するJSON形式ではありません。');const ids=new Set();for(const e of x.editions){if(typeof e.id!=='string'||typeof e.name!=='string'||ids.has(e.id)||!Array.isArray(e.players)||!Array.isArray(e.matches))throw Error('大会データが不正です。');ids.add(e.id);const pids=new Set();for(const p of e.players){if(!Number.isInteger(p.id)||pids.has(p.id)||!String(p.name||'').trim())throw Error('選手マスタに重複・不正値があります。');if(p.excludeFromRanking!==undefined&&typeof p.excludeFromRanking!=='boolean')throw Error('順位外の設定が不正です。');pids.add(p.id)}const mids=new Set();for(const m of e.matches){if(typeof m.id!=='string'||mids.has(m.id))throw Error('試合IDの重複があります。');mids.add(m.id);const issue=validMatch(m,pids);if(issue)throw Error(`${e.name}: ${issue}`)} if(e.waitingPlayers!==undefined){
   if(!e.waitingPlayers||typeof e.waitingPlayers!=='object'||Array.isArray(e.waitingPlayers))throw Error('対戦待ちデータが不正です。');
   for(const [key,list] of Object.entries(e.waitingPlayers)){
    if(!eventIds.includes(key)||!Array.isArray(list)||list.some(id=>!Number.isInteger(id)||!pids.has(id))||new Set(list).size!==list.length)throw Error('対戦待ちに無効な選手番号があります。');

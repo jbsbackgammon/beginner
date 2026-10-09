@@ -21,7 +21,7 @@ const render=runInNewContext(`${funcs}\nreportHTML`,{
  venueFor:()=> 'ワイヤーズホテル品川シーサイド',
  pdfEditionTitle:()=> 'BACKGAMMON CLASSIC 2026',
  DEFAULT_EDITION_NAME:'BACKGAMMON FESTIVAL 20XX',
- standings:()=>fakeRows,
+ standingsWithUnranked:()=>fakeRows,
  esc:(s)=>String(s),formatRate:()=> '66.7%',adoptedDayIcons:()=>'<span class="adopted-days">①②③</span>'
 });
 for(const id of ['day1','overall']){

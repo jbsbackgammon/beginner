@@ -5,7 +5,7 @@ import {runInNewContext} from 'node:vm';
 const src=readFileSync(new URL('../src/app.js',import.meta.url),'utf8');
 const extract=(start,end)=>{const a=src.indexOf(start),b=src.indexOf(end,a+1);assert.ok(a>=0&&b>a);return src.slice(a,b);};
 const fake=[{rank:1,id:9,name:'長い日本語の選手名',matches:3,wins:2,losses:1,draws:0,spread:1,rate:.6667,scored:8,conceded:5,diff:3,selectedDays:['day1','day3']}];
-const context={eventById:()=>({label:'初級戦Day1'}),dateFor:()=> '2026-10-10',standings:()=>fake,ed:()=>({name:'BACKGAMMON CLASSIC 2026'}),esc:s=>String(s),formatRate:()=> '66.7%',adoptedDayIcons:()=>'<span>① ③</span>',pdfHeading:()=>'<h2>最終成績</h2>'};
+const context={eventById:()=>({label:'初級戦Day1'}),dateFor:()=> '2026-10-10',standingsWithUnranked:()=>fake,ed:()=>({name:'BACKGAMMON CLASSIC 2026'}),esc:s=>String(s),formatRate:()=> '66.7%',adoptedDayIcons:()=>'<span>① ③</span>',pdfHeading:()=>'<h2>最終成績</h2>'};
 const stats=runInNewContext(extract('function statsTable(eventId,preview=false){','function rosterNumbers')+'\nstatsTable',context);
 const final=runInNewContext(extract('function reportHTML(id){','// A4 portrait: two columns by four rows')+'\nreportHTML',context);
 for (const [id,order] of [['day1',['得失点差','勝越','勝率']],['overall',['得失点差','勝越','勝率']],['two',['勝越','勝率','試合']]]){

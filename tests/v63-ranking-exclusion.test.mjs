@@ -63,7 +63,7 @@ test('roster checkbox is between reading and Day1, disabled when blank, and foot
  const code=pick('function rosterNumbers(e){','function rosterRowState(tr){');
  const render=runInNewContext(`${code}\nrenderPlayers`,mock);
  const html=render();
- assert.match(html,/<th>よみ<\/th><th>順位対象外<\/th><th>初級戦Day1<\/th>/);
+ assert.match(html,/<th>よみ<\/th><th>順位外<\/th><th>初級戦Day1<\/th>/);
  assert.match(html,/<input type="checkbox" data-roster-rank-excluded[^>]*checked/);
  assert.match(html,/<td colspan="10">/);
  assert.match(html, /data-roster-id="5"[^>]*>[\s\S]*?data-roster-rank-excluded[^>]*disabled/);

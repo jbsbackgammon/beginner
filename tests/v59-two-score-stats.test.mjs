@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {runInNewContext} from 'node:vm';
-import {standings, compareStats} from '../src/ranking.mjs';
+import {standings, standingsWithUnranked, compareStats} from '../src/ranking.mjs';
 
 const players=[1,2,3,4].map(id=>({id,name:`選手${id}`,entries:['two']}));
 const edition={players,matches:[
@@ -37,7 +37,7 @@ const pick=(a,b)=>{
   assert.ok(start>=0 && end>start);
   return src.slice(start,end);
 };
-const context={ed:()=>edition,standings,eventById:()=>({label:'2ptマッチラウンドロビン'}),dateFor:()=>'',esc:x=>String(x),formatRate:x=>`${(x*100).toFixed(1)}%`,pdfHeading:()=>'<h2>最終成績</h2>'};
+const context={ed:()=>edition,standings,standingsWithUnranked,eventById:()=>({label:'2ptマッチラウンドロビン'}),dateFor:()=>'',esc:x=>String(x),formatRate:x=>`${(x*100).toFixed(1)}%`,pdfHeading:()=>'<h2>最終成績</h2>'};
 const stats=runInNewContext(`${pick('function statsTable(eventId,preview=false){','function rosterNumbers')}\nstatsTable`,context);
 const report=runInNewContext(`${pick('function reportHTML(id){','// A4 portrait: two columns by four rows')}\nreportHTML`,context);
 const csv=runInNewContext(`${pick('function asCSV(id){','function download(')}\nasCSV`,context);

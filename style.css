@@ -1558,3 +1558,23 @@ html{scroll-padding-top:100px}
   #app .roster-matrix td.roster-rank-exclusion{align-items:center;text-align:center!important}
   #app .roster-matrix td.roster-rank-exclusion::before{text-align:center}
 }
+
+/* v64: After official ranks, show out-of-ranking participants in light grey.
+   Force printing of the fill in generated final-results PDFs as well. */
+@media screen {
+  #app .standings-table tbody tr.is-unranked > td {
+    background-color:#edf0f2!important;
+  }
+}
+@media screen and (max-width:1100px) {
+  #app .standings-table tbody tr.is-unranked {
+    background-color:#edf0f2!important;
+  }
+}
+@media print {
+  #print-area .report-data-table tbody tr.is-unranked > td {
+    background-color:#edf0f2!important;
+    -webkit-print-color-adjust:exact;
+    print-color-adjust:exact;
+  }
+}

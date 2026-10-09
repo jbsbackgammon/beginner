@@ -262,8 +262,29 @@ export function nextMatchNumber(edition,eventId) {
   return number;
 }
 
+/** Official ranking rows stay numbered; opted-out players are appended only in
+ * the management/summary view, ordered against one another by the same rules.
+ * Their internal comparison order never changes the official ranks. */
+function partitionRanked(edition, rows, kind, withUnranked=false) {
+  const excludedIds = new Set((edition.players||[]).filter(p=>p.excludeFromRanking===true).map(p=>p.id));
+  const ranked=assignRanks(rows.filter(row=>!excludedIds.has(row.id)),kind);
+  if(!withUnranked) return ranked;
+  const unranked=assignRanks(rows.filter(row=>excludedIds.has(row.id)),kind);
+  for(const row of unranked){row.rank='-';row.isUnranked=true;}
+  return [...ranked,...unranked];
+}
+
 export function standings(edition,eventId) {
-  if (eventId==='overall') return overallStandings(edition);
+  return calculateStandings(edition,eventId,false);
+}
+
+/** Display-only full table: official rank first, then grey unranked rows. */
+export function standingsWithUnranked(edition,eventId) {
+  return calculateStandings(edition,eventId,true);
+}
+
+function calculateStandings(edition,eventId,withUnranked=false) {
+  if (eventId==='overall') return overallStandings(edition,withUnranked);
   const ev=eventById(eventId);
   if (!ev) return [];
   const byId = new Map((edition.players||[]).map(p=>[p.id,empty(p)]));
@@ -283,17 +304,17 @@ export function standings(edition,eventId) {
     const decisive = row.wins+row.losses;
     row.rate=(ev.kind==='two' ? decisive : row.matches) ? row.wins/(ev.kind==='two'?decisive:row.matches) : 0;
   }
-  // Count games against non-ranked players for the opponent as usual; only
-  // remove excluded players from the final ranking (and downstream exports).
-  const excludedIds=new Set((edition.players||[]).filter(p=>p.excludeFromRanking===true).map(p=>p.id));
-  return assignRanks([...byId.values()].filter(r=>r.matches>0&&!excludedIds.has(r.id)),ev.kind);
+  // Even games against unranked players count normally for their opponents.
+  return partitionRanked(edition,[...byId.values()].filter(r=>r.matches>0),ev.kind,withUnranked);
 }
-export function overallStandings(edition) {
+export function overallStandings(edition,withUnranked=false) {
   const days=['day1','day2','day3'];
-  const stats=Object.fromEntries(days.map(id=>[id,new Map(standings(edition,id).map(r=>[r.id,r]))]));
+  // Overall staff rows must be based on the same actual Day stats, even though
+  // they receive no official rank in any of the individual Day standings.
+  const stats=Object.fromEntries(days.map(id=>[id,new Map(standingsWithUnranked(edition,id).map(r=>[r.id,r]))]));
   const players=edition.players||[], result=[];
   for(const p of players){
-    if(p.excludeFromRanking===true) continue;
+    if(!withUnranked && p.excludeFromRanking===true) continue;
     const available=days.map((d,i)=>({day:d,index:i,row:stats[d].get(p.id)})).filter(x=>x.row?.matches>0);
     if(available.length<2||!stats.day3.has(p.id)) continue;
     // Existing Excel: difference, then W-L, number of matches, then earlier Day on an exact tie.
@@ -303,7 +324,7 @@ export function overallStandings(edition) {
     r.diff=r.scored+r.conceded;r.spread=r.wins-r.losses;r.rate=r.matches?r.wins/r.matches:0;
     result.push(r);
   }
-  return assignRanks(result,'points');
+  return partitionRanked(edition,result,'points',withUnranked);
 }
 export function entryCount(edition,eventId){return (edition.matches||[]).filter(m=>m.event===eventId).length}
 

@@ -364,10 +364,36 @@ function personalResultDots(eventId,row){
  }
  return `<div class="personal-results" style="--personal-dot-size:${dot.toFixed(2)}mm;--personal-row-width:${(dot*perRow+(perRow-1)*0.8).toFixed(2)}mm">${rows.join('')}</div>`;
 }
+// Overall personal cards show each Day's own ranking criteria, including Days
+// not selected for the overall score. Match statistics are event-local.
+function overallPersonalDayDetails(row,dayResults){
+ const selected=new Set(row.selectedDays||[]);
+ const registrations=new Set(player(row.id)?.entries||[]);
+ const lines=['day1','day2','day3'].map((day,i)=>{
+  const dayStats=dayResults[day].get(row.id);
+  // A recorded match also counts as attendance, even for older imported data
+  // without the corresponding roster checkbox.
+  if(!dayStats && !registrations.has(day)){
+   return `<div class="personal-overall-day">Day${i+1}：不出場</div>`;
+  }
+  const diff=dayStats?.diff??0;
+  const spread=dayStats?.spread??0;
+  const rate=dayStats?.rate??0;
+  const signed=n=>n>0?`+${n}`:String(n);
+  const status=selected.has(day)?'採用':'不採用';
+  return `<div class="personal-overall-day">Day${i+1}：得失点差${signed(diff)}　勝越${signed(spread)}　勝率${formatRate(rate)}　${status}</div>`;
+ }).join('');
+ return `<div class="personal-overall-days">${lines}</div>`;
+}
 function personalReportHTML(id){
  const rows=standings(ed(),id).slice().sort((a,b)=>a.id-b.id);
  const two=id==='two',label=eventById(id)?.label||'';
  const date=id==='overall'?dateFor('day3'):dateFor(id);
+ const overallDayResults=id==='overall'
+  ? Object.fromEntries(['day1','day2','day3'].map(day=>[
+     day,new Map(standingsWithUnranked(ed(),day).map(stats=>[stats.id,stats]))
+    ]))
+  : null;
  const cell=r=>{
   if(!r)return `<article class="personal-card is-blank" aria-hidden="true"></article>`;
   const history=personalMatchSequence(id,r);
@@ -385,7 +411,7 @@ function personalReportHTML(id){
    <div class="personal-rank"><span class="personal-rank-label">${r.rank===1?'優勝':`${r.rank}位`}</span><span class="personal-rank-total"> / ${rows.length}名</span></div>
    <div class="personal-summary">${r.matches}試合　${r.wins}勝${r.losses}敗${two?` ${r.draws}引分`:''}　勝越${r.spread}　勝率${formatRate(r.rate)}</div>
    <div class="personal-score-totals">得点${scored}　失点${conceded}　得失点差${diff}</div>
-   ${personalResultDots(id,r)}
+   ${id==='overall'?overallPersonalDayDetails(r,overallDayResults):personalResultDots(id,r)}
    <div class="personal-footer"><div>${esc([date,venueFor()].filter(Boolean).join('　'))}</div><div>主催　日本バックギャモン協会</div></div>
   </article>`;
  };

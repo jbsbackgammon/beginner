@@ -1590,3 +1590,30 @@ html{scroll-padding-top:100px}
     print-color-adjust:exact;
   }
 }
+
+/* v66: Three per-Day ranking criteria on overall individual scorecards.
+   Use the former blank result-symbol region; other event cards are unchanged. */
+@media print {
+  #print-area .personal-card .personal-overall-days {
+    display:flex!important;
+    flex-direction:column!important;
+    align-items:stretch!important;
+    justify-content:center!important;
+    gap:1mm!important;
+    margin:auto 0!important;
+    padding:0!important;
+    width:100%!important;
+    min-height:0!important;
+    flex:0 0 auto!important;
+    color:#000!important;
+    font-size:11pt!important;
+    font-weight:400!important;
+    line-height:1.25!important;
+    letter-spacing:-.025em!important;
+  }
+  #print-area .personal-card .personal-overall-day {
+    white-space:nowrap!important;
+    text-align:left!important;
+    color:#000!important;
+  }
+}

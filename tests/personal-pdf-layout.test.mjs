@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {runInNewContext} from 'node:vm';
-import {EVENTS,standings,createDemoEdition} from '../src/ranking.mjs';
+import {EVENTS,standings,standingsWithUnranked,createDemoEdition} from '../src/ranking.mjs';
 const src=readFileSync(new URL('../src/app.js',import.meta.url),'utf8');
 const style=readFileSync(new URL('../style.css',import.meta.url),'utf8');
 const start=src.indexOf('function personalMatchSequence(eventId,row){');
@@ -10,7 +10,8 @@ const end=src.indexOf('function renderExport(){',start);
 assert.ok(start>0&&end>start);
 const demo=createDemoEdition(()=>0.417);
 const context={
- ed:()=>demo,standings,EVENTS,
+ ed:()=>demo,standings,standingsWithUnranked,EVENTS,
+ player:id=>demo.players.find(p=>p.id===id),
  eventById:id=>EVENTS.find(e=>e.id===id),
  dateFor:id=>EVENTS.find(e=>e.id===id)?.date||'',
  venueFor:()=> 'ワイヤーズホテル品川シーサイド',

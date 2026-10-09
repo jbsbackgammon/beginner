@@ -36,7 +36,7 @@ test('PDF uses number-sorted cards, prominent rank, separated dates and associat
  assert.match(html,/class="personal-rank-label">2位<\/span><span class="personal-rank-total"> \/ \d+名<\/span>/);
  assert.doesNotMatch(html,/class="personal-rank-label">第\d+位<\/span>/);
  assert.match(html,/勝越-?\d+　勝率\d+\.\d%/);
- assert.match(html,/得点\d+　失点-\d+　得失点差-?\d+/);
+ assert.match(html,/得点\d+　失点-\d+　得失点差[+-]?\d+/);
  assert.match(html,/2026-10-10　ワイヤーズホテル品川シーサイド/);
  assert.match(html,/主催　日本バックギャモン協会/);
  assert.equal((html.match(/class="personal-card(?: is-blank)?"/g)||[]).length,32);
@@ -102,4 +102,24 @@ test('personal PDF requested seven text groups are all 12pt',()=>{
  }
  assert.match(style,/#print-area \.personal-card \.personal-summary,\s*#print-area \.personal-card \.personal-score-totals \{\s*font-size:12pt!important/);
  assert.match(style,/#print-area \.personal-card \.personal-rank \{\s*font-size:28pt!important/);
+});
+
+// v68: The overall and event-specific personal PDFs show an explicit + for
+// positive score differences, without prefixing 0 or a negative number.
+test('personal score difference uses + only for positive values in every event',()=>{
+ let positive=0,negative=0,zero=0;
+ for(const event of EVENTS){
+  const html=fn.personalReportHTML(event.id);
+  const cards=[...html.matchAll(/<article class="personal-card">([\s\S]*?)<\/article>/g)];
+  assert.ok(cards.length>0,`${event.id}: cards missing`);
+  for(const [,card] of cards){
+   const match=card.match(/class="personal-score-totals">得点(\d+)　失点(-?\d+)　得失点差([+-]?\d+)<\/div>/);
+   assert.ok(match,`${event.id}: personal score totals missing`);
+   const [,scored,conceded,displayed]=match;
+   const diff=Number(scored)+Number(conceded);
+   assert.equal(displayed,diff>0?`+${diff}`:String(diff),`${event.id}: unexpected difference prefix`);
+   if(diff>0)positive++; else if(diff<0)negative++; else zero++;
+  }
+ }
+ assert.ok(positive>0 && negative>0 && zero>0,'test sample must cover all three signs');
 });

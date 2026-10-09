@@ -409,7 +409,7 @@ function personalReportHTML(id){
    <div class="personal-event-title">${esc(pdfEditionTitle())}</div>
    <div class="personal-event-detail">${esc(label)}　個人成績 #${r.id}</div>
    <div class="personal-rank"><span class="personal-rank-label">${r.rank===1?'優勝':`${r.rank}位`}</span><span class="personal-rank-total"> / ${rows.length}名</span></div>
-   <div class="personal-summary">${r.matches}試合　${r.wins}勝${r.losses}敗${two?` ${r.draws}引分`:''}　勝越${r.spread}　勝率${formatRate(r.rate)}</div>
+   <div class="personal-summary">${r.matches}試合　${r.wins}勝${r.losses}敗${two?` ${r.draws}引分`:''}　勝越${r.spread>0?`+${r.spread}`:r.spread}　勝率${formatRate(r.rate)}</div>
    <div class="personal-score-totals">得点${scored}　失点${conceded}　得失点差${diff>0?`+${diff}`:diff}</div>
    ${id==='overall'?overallPersonalDayDetails(r,overallDayResults):personalResultDots(id,r)}
    <div class="personal-footer"><div>${esc([date,venueFor()].filter(Boolean).join('　'))}</div><div>主催　日本バックギャモン協会</div></div>

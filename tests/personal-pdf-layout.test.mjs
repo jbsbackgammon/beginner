@@ -35,7 +35,7 @@ test('PDF uses number-sorted cards, prominent rank, separated dates and associat
  assert.doesNotMatch(html,/class="personal-rank-label">第1位/);
  assert.match(html,/class="personal-rank-label">2位<\/span><span class="personal-rank-total"> \/ \d+名<\/span>/);
  assert.doesNotMatch(html,/class="personal-rank-label">第\d+位<\/span>/);
- assert.match(html,/勝越-?\d+　勝率\d+\.\d%/);
+ assert.match(html,/勝越[+-]?\d+　勝率\d+\.\d%/);
  assert.match(html,/得点\d+　失点-\d+　得失点差[+-]?\d+/);
  assert.match(html,/2026-10-10　ワイヤーズホテル品川シーサイド/);
  assert.match(html,/主催　日本バックギャモン協会/);

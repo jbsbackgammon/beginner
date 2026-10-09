@@ -524,7 +524,19 @@ function onAction(action,id){switch(action){
   }
   break
  }
- case 'edit-match':{const m=ed().matches.find(x=>String(x.id)===String(id));if(!m)return;activeEvent=m.event;$('header-event').value=m.event;editingMatch=m.id;preselectedPair=null;tab='entry';render();window.scrollTo({top:0,behavior:'smooth'});break}
+ case 'edit-match':{
+  const m=ed().matches.find(x=>String(x.id)===String(id));if(!m)return;
+  // Re-rendering the correction form replaces the history scroller. Remember
+  // its position before replacement so editing an older match does not jump
+  // the history back to the newest match. Keep page scroll on narrow screens.
+  const historyPosition=$('history-results')?.scrollTop??0;
+  const pageX=window.scrollX,pageY=window.scrollY;
+  activeEvent=m.event;$('header-event').value=m.event;
+  editingMatch=m.id;preselectedPair=null;tab='entry';render();
+  const history=$('history-results');if(history)history.scrollTop=historyPosition;
+  window.scrollTo(pageX,pageY);
+  break;
+ }
  case 'cancel-match':editingMatch=null;preselectedPair=null;render();break;
  case 'delete-match':if(!confirm('この試合結果を削除しますか？'))return;ed().matches=ed().matches.filter(m=>String(m.id)!==String(id));if(editingMatch===id)editingMatch=null;save();render();notice('試合結果を削除しました。');break;
  case 'backup':download(`beginner_${timestamp()}.json`,JSON.stringify({schema:1,activeEditionId:data.activeEditionId,editions:data.editions},null,2),'application/json');break;

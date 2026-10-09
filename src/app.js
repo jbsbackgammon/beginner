@@ -380,8 +380,8 @@ function overallPersonalDayDetails(row,dayResults){
   const spread=dayStats?.spread??0;
   const rate=dayStats?.rate??0;
   const signed=n=>n>0?`+${n}`:String(n);
-  const status=selected.has(day)?'採用':'不採用';
-  return `<div class="personal-overall-day">Day${i+1}：得失点差${signed(diff)}　勝越${signed(spread)}　勝率${formatRate(rate)}　${status}</div>`;
+  const adoption=selected.has(day)?'　採用':'';
+  return `<div class="personal-overall-day">Day${i+1}：得失点差${signed(diff)}　勝越${signed(spread)}　勝率${formatRate(rate)}${adoption}</div>`;
  }).join('');
  return `<div class="personal-overall-days">${lines}</div>`;
 }

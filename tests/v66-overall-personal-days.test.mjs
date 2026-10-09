@@ -37,7 +37,7 @@ test('3 lines include all three event-local ranking criteria and the adopted Day
  assert.match(html,/Day3：得失点差\+9　勝越\+2　勝率50\.2%　採用/);
 });
 
-test('a played but non-adopted Day is shown with its own stats and non-adoption marker',()=>{
+test('a played but non-adopted Day is shown with stats but no non-adoption marker',()=>{
  const player=demo.players[0];
  player.entries=['day1','day2','day3'];
  const stats={
@@ -47,7 +47,8 @@ test('a played but non-adopted Day is shown with its own stats and non-adoption 
  };
  const html=functions.overallPersonalDayDetails({id:player.id,selectedDays:['day1','day3']},stats);
  assert.match(html,/Day1：得失点差-3　勝越-2　勝率25\.0%　採用/);
- assert.match(html,/Day2：得失点差0　勝越0　勝率50\.0%　不採用/);
+ assert.match(html,/Day2：得失点差0　勝越0　勝率50\.0%<\/div>/);
+ assert.doesNotMatch(html,/不採用/);
  assert.match(html,/Day3：得失点差\+2　勝越\+1　勝率75\.0%　採用/);
 });
 
@@ -64,11 +65,15 @@ test('overall card contains three Day rows before venue and organizer; other eve
  assert.match(one,/class="personal-dot/);
 });
 
-test('only print CSS changes overall, keeping new labels black and in the blank space',()=>{
+test('overall Day list is black and centered as a block, keeping each row left-aligned',()=>{
  const styles=css.slice(css.indexOf('/* v66: Three per-Day'));
  assert.match(styles,/@media print/);
  assert.match(styles,/\.personal-overall-days/);
  assert.match(styles,/margin:auto 0!important/);
+ assert.match(styles,/align-self:center!important/);
+ assert.match(styles,/align-items:flex-start!important/);
+ assert.match(styles,/width:max-content!important/);
+ assert.match(styles,/text-align:left!important/);
  assert.match(styles,/color:#000!important/);
  assert.match(styles,/white-space:nowrap!important/);
  assert.doesNotMatch(styles,/#16804e/);

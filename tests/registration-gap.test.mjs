@@ -46,5 +46,5 @@ test('correct save flow: only new entries guard, cancel avoids mutations, last t
   assert.match(code,/大会名の確認/);
   assert.match(code,/大会名「\$\{evLabel\(activeEvent\)\}」に間違いないか確認してください。/);
   assert.doesNotMatch(code,/種目：\$\{evLabel\(activeEvent\)\}/);
-  assert.match(code,/ed\(\)\.matches\.push\(m\);ed\(\)\.lastResultRegisteredAt=Date\.now\(\)/);
+  assert.match(code,/ed\(\)\.matches\.push\(m\);\s*ed\(\)\.lastResultRegisteredAt=Date\.now\(\)/);
 });

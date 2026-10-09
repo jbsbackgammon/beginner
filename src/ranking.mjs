@@ -9,12 +9,18 @@ export const EVENTS = [
 ];
 export const DEMO_EDITION_ID = '__beginner_demo_v34__';
 
+// One source of truth for the six events that store actual match results.
+const MATCH_EVENTS = EVENTS.filter(event => event.id !== 'overall');
+const OVERALL_DAYS = ['day1','day2','day3'];
+const TWO_MATCH_SCORES = [[2,0],[2,1],[1,1],[1,2],[0,2]];
+
+
 /** Build temporary, random but rule-valid test records, never mutating live data.
  * 30 players, randomized attendance (26-29 per event), and 300 unique pairings
  * in each of the six individual events (1,800 results).
  */
 export function createDemoEdition(random = Math.random) {
-  const events = EVENTS.filter(e => e.id !== 'overall');
+  const events = MATCH_EVENTS;
   const rand = () => {
     const n = Number(random());
     return Number.isFinite(n) ? Math.max(0, Math.min(0.999999999, n)) : 0.5;
@@ -99,7 +105,7 @@ export function createDemoEdition(random = Math.random) {
       const [a,b] = pairs[i];
       let sa,sb;
       if (event.kind === 'two') {
-        [sa,sb] = pick([[2,0],[2,1],[1,1],[1,2],[0,2]]);
+        [sa,sb] = pick(TWO_MATCH_SCORES);
       } else {
         const score = pick(event.kind === 'cube' ? [1,2,3,4,6,8,12] : [1,2,3]);
         [sa,sb] = rand() < 0.5 ? [score,0] : [0,score];
@@ -208,7 +214,7 @@ export function validMatch(m, playerIds) {
   if (m.a === m.b) return '同じ選手同士は登録できません。';
   if (!Number.isInteger(m.sa) || !Number.isInteger(m.sb)) return '得点は整数で入力してください。';
   if (ev.kind === 'two') {
-    if (![[2,0],[2,1],[1,1],[1,2],[0,2]].some(([a,b]) => a===m.sa && b===m.sb)) return '2pt戦は2-0・2-1・1-1・1-2・0-2のいずれかです。';
+    if (!TWO_MATCH_SCORES.some(([a,b]) => a===m.sa && b===m.sb)) return '2pt戦は2-0・2-1・1-1・1-2・0-2のいずれかです。';
   } else {
     if (!((m.sa>0 && m.sb===0)||(m.sb>0 && m.sa===0))) return '勝者の得点を入力してください。';
     const pt = Math.max(m.sa,m.sb);
@@ -233,7 +239,7 @@ export function assignRanks(arr, kind) {
 export function ensureMatchNumbers(edition) {
   const matches=edition.matches||[];
   if (!edition.nextMatchNumbers || typeof edition.nextMatchNumbers!=='object' || Array.isArray(edition.nextMatchNumbers)) edition.nextMatchNumbers={};
-  for(const event of EVENTS.filter(e=>e.id!=='overall')) {
+  for(const event of MATCH_EVENTS) {
     const eventMatches=matches.filter(m=>m.event===event.id);
     const used=new Set();
     let highest=0;
@@ -308,7 +314,7 @@ function calculateStandings(edition,eventId,withUnranked=false) {
   return partitionRanked(edition,[...byId.values()].filter(r=>r.matches>0),ev.kind,withUnranked);
 }
 export function overallStandings(edition,withUnranked=false) {
-  const days=['day1','day2','day3'];
+  const days=OVERALL_DAYS;
   // Overall staff rows must be based on the same actual Day stats, even though
   // they receive no official rank in any of the individual Day standings.
   const stats=Object.fromEntries(days.map(id=>[id,new Map(standingsWithUnranked(edition,id).map(r=>[r.id,r]))]));
@@ -394,7 +400,7 @@ export function arrangeWaitingPair(edition, eventId, a, b) {
  */
 export function migrateReservedWaiting(edition) {
   if(edition.reservationWaitingVersion!==1 && Array.isArray(edition.pendingPairings)) {
-    for(const event of EVENTS.filter(e=>e.id!=='overall')) {
+    for(const event of MATCH_EVENTS) {
       const pairedIds=new Set(edition.pendingPairings.filter(p=>p?.event===event.id).flatMap(p=>[p.a,p.b]));
       if(pairedIds.size)storeWaiting(edition,event.id,waitingPlayerIds(edition,event.id).filter(id=>!pairedIds.has(id)));
     }

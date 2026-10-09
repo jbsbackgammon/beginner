@@ -435,49 +435,166 @@ function renderExport(){
  </div></section><section class="box report-rankings">${statsTable(activeEvent)}</section>`;
 }
 
-function matchSave(form){const f=new FormData(form),a=Number(f.get('a_no')||f.get('a')),b=Number(f.get('b_no')||f.get('b'));
- if(!a||!b||a===b){alert(a===b&&a>0?'同じ選手同士の結果は登録できません。':'左右に異なる選手を指定してください。');return}
- if(!isEventEntrant(ed(),activeEvent,a)||!isEventEntrant(ed(),activeEvent,b)){alert(`${evLabel(activeEvent)}で出場登録されている選手だけが結果登録できます。選手管理の出場設定をご確認ください。`);return}
- let sa,sb;
+// Register and update results through the same validation path. In particular,
+// a correction retains its match number and does not reset the six-hour alert.
+function matchSave(form){
+ const f=new FormData(form);
+ const a=Number(f.get('a_no')||f.get('a'));
+ const b=Number(f.get('b_no')||f.get('b'));
+ if(!a||!b||a===b){
+  alert(a===b&&a>0?'同じ選手同士の結果は登録できません。':'左右に異なる選手を指定してください。');
+  return;
+ }
+ if(!isEventEntrant(ed(),activeEvent,a)||!isEventEntrant(ed(),activeEvent,b)){
+  alert(`${evLabel(activeEvent)}で出場登録されている選手だけが結果登録できます。選手管理の出場設定をご確認ください。`);
+  return;
+ }
+
  const winner=form.dataset.winner;
+ let sa,sb;
  if(activeEvent==='two'){
   const result=String(f.get('result')||'');
-  if(!canRegisterSelection('two',winner,result)){alert('「勝」または「引分」を選択し、対応する得点を選んでください。');return}
+  if(!canRegisterSelection('two',winner,result)){
+   alert('「勝」または「引分」を選択し、対応する得点を選んでください。');
+   return;
+  }
   [sa,sb]=result.split('-').map(Number);
  }else{
-  if(!canRegisterSelection(eventById(activeEvent).kind,winner)){alert('左右いずれかの「勝」ボタンを選択してください。');return}
+  if(!canRegisterSelection(eventById(activeEvent).kind,winner)){
+   alert('左右いずれかの「勝」ボタンを選択してください。');
+   return;
+  }
   const raw=String(f.get('points')||'');
-  if(!raw){alert('得点を選択してください。');return}
+  if(!raw){alert('得点を選択してください。');return;}
   const val=Number(raw);
-  sa=winner==='a'?val:0;sb=winner==='b'?val:0;
+  sa=winner==='a'?val:0;
+  sb=winner==='b'?val:0;
  }
- const m={id:editingMatch||'m'+Date.now()+'-'+Math.random().toString(36).slice(2,8),event:activeEvent,a,b,sa,sb};const err=validMatch(m,new Set(ed().players.map(p=>p.id)));if(err){alert(err);return}
- // For new result registrations, confirm the selected tournament after six hours of inactivity.
- // Corrections do not count as a new registration and must not reset this reminder.
+
+ const m={id:editingMatch||'m'+Date.now()+'-'+Math.random().toString(36).slice(2,8),event:activeEvent,a,b,sa,sb};
+ const err=validMatch(m,new Set(ed().players.map(p=>p.id)));
+ if(err){alert(err);return;}
+
+ // Only new registrations, never corrections, require a confirmation after six hours.
  if(!editingMatch && needsTournamentConfirmation(data.editions)){
   const message=`大会名の確認\n前回の結果登録から6時間以上経過しています。\n大会名「${evLabel(activeEvent)}」に間違いないか確認してください。\nこの大会に結果を登録しますか？`;
   if(!confirm(message))return;
  }
  const repeated=ed().matches.some(x=>x.id!==m.id&&x.event===m.event&&((x.a===a&&x.b===b)||(x.a===b&&x.b===a)));
  if(repeated&&!confirm('この2名は既にこの大会で対戦しています。重複対戦として登録しますか？'))return;
- if(editingMatch){const i=ed().matches.findIndex(x=>x.id===editingMatch);if(i<0)return;m.matchNo=ed().matches[i].matchNo;ed().matches[i]=m;}else{m.matchNo=nextMatchNumber(ed(),activeEvent);ed().matches.push(m);ed().lastResultRegisteredAt=Date.now();}
- returnPlayersToWaiting(ed(),activeEvent,a,b);
- editingMatch=null;preselectedPair=null;save();render();notice('試合結果を保存しました。');
-}
 
-function asCSV(id){const isTwo=id==='two',overall=id==='overall';let h=['順位','氏名','選手No.','試合','勝','負'];if(isTwo)h.push('引分');h.push('勝越','勝率','得点','失点','得失点差');if(overall)h.push('Day');
- const lines=[h,...standings(ed(),id).map(r=>{const a=[r.rank,r.name,r.id,r.matches,r.wins,r.losses];if(isTwo)a.push(r.draws);a.push(r.spread,formatRate(r.rate),r.scored,r.conceded,r.diff);if(overall)a.push(r.selectedDays.map(dayName).join('+'));return a})];
- const safe=s=>{const t=String(s??'');return '"'+(typeof s==='string'&&/^[=+\-@\t\r]/.test(t)?"'":'')+t.replaceAll('"','""')+'"'};return '\ufeff'+lines.map(a=>a.map(safe).join(',')).join('\r\n')}
+ if(editingMatch){
+  const i=ed().matches.findIndex(x=>x.id===editingMatch);
+  if(i<0)return;
+  m.matchNo=ed().matches[i].matchNo;
+  ed().matches[i]=m;
+ }else{
+  m.matchNo=nextMatchNumber(ed(),activeEvent);
+  ed().matches.push(m);
+  ed().lastResultRegisteredAt=Date.now();
+ }
+ returnPlayersToWaiting(ed(),activeEvent,a,b);
+ editingMatch=null;
+ preselectedPair=null;
+ save();render();notice('試合結果を保存しました。');
+}
+// All fields are quoted. Prefix spreadsheet formulas so CSV cannot execute
+// arbitrary formula text when opened in spreadsheet applications.
+function asCSV(id){
+ const isTwo=id==='two',overall=id==='overall';
+ const header=['順位','氏名','選手No.','試合','勝','負'];
+ if(isTwo)header.push('引分');
+ header.push('勝越','勝率','得点','失点','得失点差');
+ if(overall)header.push('Day');
+ const lines=[header,...standings(ed(),id).map(r=>{
+  const values=[r.rank,r.name,r.id,r.matches,r.wins,r.losses];
+  if(isTwo)values.push(r.draws);
+  values.push(r.spread,formatRate(r.rate),r.scored,r.conceded,r.diff);
+  if(overall)values.push(r.selectedDays.map(dayName).join('+'));
+  return values;
+ })];
+ const safe=s=>{
+  const t=String(s??'');
+  return '"'+(typeof s==='string'&&/^[=+\-@\t\r]/.test(t)?"'":'')+t.replaceAll('"','""')+'"';
+ };
+ return '\ufeff'+lines.map(values=>values.map(safe).join(',')).join('\r\n');
+}
 function download(name,content,type){const blob=new Blob([content],{type}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)}
 function timestamp(){const d=new Date(),pad=x=>String(x).padStart(2,'0');return `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`}
-function normalizeImport(x){if(!x||x.schema!==1||!Array.isArray(x.editions))throw Error('対応するJSON形式ではありません。');const ids=new Set();for(const e of x.editions){if(typeof e.id!=='string'||typeof e.name!=='string'||ids.has(e.id)||!Array.isArray(e.players)||!Array.isArray(e.matches))throw Error('大会データが不正です。');ids.add(e.id);const pids=new Set();for(const p of e.players){if(!Number.isInteger(p.id)||pids.has(p.id)||!String(p.name||'').trim())throw Error('選手マスタに重複・不正値があります。');if(p.excludeFromRanking!==undefined&&typeof p.excludeFromRanking!=='boolean')throw Error('順位外の設定が不正です。');pids.add(p.id)}const mids=new Set();for(const m of e.matches){if(typeof m.id!=='string'||mids.has(m.id))throw Error('試合IDの重複があります。');mids.add(m.id);const issue=validMatch(m,pids);if(issue)throw Error(`${e.name}: ${issue}`)} if(e.waitingPlayers!==undefined){
-  if(!e.waitingPlayers||typeof e.waitingPlayers!=='object'||Array.isArray(e.waitingPlayers))throw Error('対戦待ちデータが不正です。');
-  for(const [key,list] of Object.entries(e.waitingPlayers)){
-   if(!eventIds.includes(key)||!Array.isArray(list)||list.some(id=>!Number.isInteger(id)||!pids.has(id))||new Set(list).size!==list.length)throw Error('対戦待ちに無効な選手番号があります。');
+// Preserve schema 1 and the current browser-storage key for older event data.
+// Validate every edition before merging it into the current local copy.
+function normalizeImport(x){
+ if(!x||x.schema!==1||!Array.isArray(x.editions))throw Error('対応するJSON形式ではありません。');
+ const ids=new Set();
+ for(const e of x.editions){
+  if(typeof e.id!=='string'||typeof e.name!=='string'||ids.has(e.id)||!Array.isArray(e.players)||!Array.isArray(e.matches)){
+   throw Error('大会データが不正です。');
   }
+  ids.add(e.id);
+  const pids=new Set();
+  for(const p of e.players){
+   if(!Number.isInteger(p.id)||pids.has(p.id)||!String(p.name||'').trim())throw Error('選手マスタに重複・不正値があります。');
+   if(p.excludeFromRanking!==undefined&&typeof p.excludeFromRanking!=='boolean')throw Error('順位外の設定が不正です。');
+   pids.add(p.id);
+  }
+  const mids=new Set();
+  for(const m of e.matches){
+   if(typeof m.id!=='string'||mids.has(m.id))throw Error('試合IDの重複があります。');
+   mids.add(m.id);
+   const issue=validMatch(m,pids);
+   if(issue)throw Error(`${e.name}: ${issue}`);
+  }
+  if(e.waitingPlayers!==undefined){
+   if(!e.waitingPlayers||typeof e.waitingPlayers!=='object'||Array.isArray(e.waitingPlayers)){
+    throw Error('対戦待ちデータが不正です。');
+   }
+   for(const [key,list] of Object.entries(e.waitingPlayers)){
+    if(!eventIds.includes(key)||!Array.isArray(list)||list.some(id=>!Number.isInteger(id)||!pids.has(id))||new Set(list).size!==list.length){
+     throw Error('対戦待ちに無効な選手番号があります。');
+    }
+   }
+  }
+  if(e.venue!==undefined&&typeof e.venue!=='string')throw Error('会場名が不正です。');
+  e.venue=typeof e.venue==='string'?e.venue:DEFAULT_VENUE;
+  e.dates=e.dates||{};
+  for(const p of e.players){
+   p.entries=Array.isArray(p.entries)?p.entries.filter(v=>eventIds.includes(v)):[];
+  }
+  ensureMatchNumbers(e);
+  migrateReservedWaiting(e);
  }
- if(e.venue!==undefined&&typeof e.venue!=='string')throw Error('会場名が不正です。');e.venue=typeof e.venue==='string'?e.venue:DEFAULT_VENUE;e.dates=e.dates||{};for(const p of e.players){p.entries=Array.isArray(p.entries)?p.entries.filter(v=>eventIds.includes(v)):[]}ensureMatchNumbers(e);migrateReservedWaiting(e)}return x}
-function fileLoad(){const i=document.createElement('input');i.type='file';i.accept='.json,application/json';i.onchange=async()=>{if(!i.files?.length)return;try{const raw=JSON.parse(await i.files[0].text());const imported=normalizeImport(raw);let n=0;for(const e of imported.editions){if(data.editions.some(x=>x.id===e.id)){if(!confirm(`「${e.name}」が存在します。上書きしますか？（操作を取り消せません）`))continue;data.editions=data.editions.filter(x=>x.id!==e.id)}data.editions.push(e);data.activeEditionId=e.id;n++}if(n){save();render();notice(`${n}大会分のデータを取り込みました。`)}else notice('取り込みは行われませんでした。');}catch(e){alert('JSON取込エラー：'+e.message)}};i.click();}
+ return x;
+}
+function fileLoad(){
+ const input=document.createElement('input');
+ input.type='file';
+ input.accept='.json,application/json';
+ input.onchange=async()=>{
+  if(!input.files?.length)return;
+  try{
+   const raw=JSON.parse(await input.files[0].text());
+   const imported=normalizeImport(raw);
+   let count=0;
+   for(const edition of imported.editions){
+    if(data.editions.some(x=>x.id===edition.id)){
+     if(!confirm(`「${edition.name}」が存在します。上書きしますか？（操作を取り消せません）`))continue;
+     data.editions=data.editions.filter(x=>x.id!==edition.id);
+    }
+    data.editions.push(edition);
+    data.activeEditionId=edition.id;
+    count++;
+   }
+   if(count){
+    save();render();notice(`${count}大会分のデータを取り込みました。`);
+   }else{
+    notice('取り込みは行われませんでした。');
+   }
+  }catch(e){
+   alert('JSON取込エラー：'+e.message);
+  }
+ };
+ input.click();
+}
 function toggleTestData(){
  if(data.activeEditionId===DEMO_EDITION_ID){
   if(!confirm('テストを終了して、元の大会データに戻りますか？\nテスト中に入力した内容は削除されます。'))return;
@@ -500,7 +617,16 @@ function toggleTestData(){
  tab='players';activeEvent='day1';historySearch='';editingMatch=null;preselectedPair=null;
  save();render();notice('テストデータ：選手30名・各大会300件（全1,800件）の試合結果を生成しました。');
 }
-function newEdition(){const name=prompt('新しい大会データの名称','BACKGAMMON CLASSIC 2027');if(!name?.trim())return;const id='edition-'+Date.now();data.editions.push({id,name:name.trim(),players:[],matches:[],dates:{}});data.activeEditionId=id;activeEvent='day1';$('header-event').value='day1';save();render();notice('大会データを作成しました。')}
+function newEdition(){
+ const name=prompt('新しい大会データの名称','BACKGAMMON CLASSIC 2027');
+ if(!name?.trim())return;
+ const id='edition-'+Date.now();
+ data.editions.push({id,name:name.trim(),players:[],matches:[],dates:{}});
+ data.activeEditionId=id;
+ activeEvent='day1';
+ $('header-event').value='day1';
+ save();render();notice('大会データを作成しました。');
+}
 function onAction(action,id){switch(action){
  case 'add-roster-row':{
   const visible=rosterNumbers(ed());

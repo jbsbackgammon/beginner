@@ -283,13 +283,17 @@ export function standings(edition,eventId) {
     const decisive = row.wins+row.losses;
     row.rate=(ev.kind==='two' ? decisive : row.matches) ? row.wins/(ev.kind==='two'?decisive:row.matches) : 0;
   }
-  return assignRanks([...byId.values()].filter(r=>r.matches>0),ev.kind);
+  // Count games against non-ranked players for the opponent as usual; only
+  // remove excluded players from the final ranking (and downstream exports).
+  const excludedIds=new Set((edition.players||[]).filter(p=>p.excludeFromRanking===true).map(p=>p.id));
+  return assignRanks([...byId.values()].filter(r=>r.matches>0&&!excludedIds.has(r.id)),ev.kind);
 }
 export function overallStandings(edition) {
   const days=['day1','day2','day3'];
   const stats=Object.fromEntries(days.map(id=>[id,new Map(standings(edition,id).map(r=>[r.id,r]))]));
   const players=edition.players||[], result=[];
   for(const p of players){
+    if(p.excludeFromRanking===true) continue;
     const available=days.map((d,i)=>({day:d,index:i,row:stats[d].get(p.id)})).filter(x=>x.row?.matches>0);
     if(available.length<2||!stats.day3.has(p.id)) continue;
     // Existing Excel: difference, then W-L, number of matches, then earlier Day on an exact tie.

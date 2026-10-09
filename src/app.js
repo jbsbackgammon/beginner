@@ -254,14 +254,15 @@ function renderPlayers(){
    const attending=!!p?.entries?.includes(event);
    return `<td data-label="${esc(header[i])}"><button type="button" class="roster-attendance ${attending?'attending':''}" data-roster-event="${event}" aria-pressed="${attending}" aria-label="No.${id} ${header[i]} ${attending?'出場':'未出場'}" ${active?'':'disabled'}>${attending?'出場':'ー'}</button></td>`;
   }).join('');
-  return `<tr data-roster-id="${id}" class="${active?'':'roster-inactive'}"><td class="roster-no" data-label="番号">${id}</td><td data-label="選手"><input type="text" data-roster-name aria-label="No.${id} 選手" autocomplete="off" maxlength="100" value="${esc(p?.name||'')}"></td><td data-label="よみ"><input type="text" data-roster-kana aria-label="No.${id} よみ" autocomplete="off" maxlength="100" value="${esc(p?.kana||'')}" ${active?'':'disabled'}></td>${cells}</tr>`;
+  return `<tr data-roster-id="${id}" class="${active?'':'roster-inactive'}"><td class="roster-no" data-label="番号">${id}</td><td data-label="選手"><input type="text" data-roster-name aria-label="No.${id} 選手" autocomplete="off" maxlength="100" value="${esc(p?.name||'')}"></td><td data-label="よみ"><input type="text" data-roster-kana aria-label="No.${id} よみ" autocomplete="off" maxlength="100" value="${esc(p?.kana||'')}" ${active?'':'disabled'}></td><td class="roster-rank-exclusion" data-label="順位対象外"><input type="checkbox" data-roster-rank-excluded aria-label="No.${id} 順位対象外" ${p?.excludeFromRanking===true?'checked':''} ${active?'':'disabled'}></td>${cells}</tr>`;
  }).join('');
- return `<div class="box roster-box"><div class="table-scroll roster-scroll"><table class="data-table roster-matrix"><thead><tr><th>番号</th><th>選手</th><th>よみ</th>${header.map(x=>`<th>${x}</th>`).join('')}</tr></thead><tbody>${rows}</tbody><tfoot><tr class="roster-add-row"><td colspan="${header.length+3}"><button type="button" class="btn" data-action="add-roster-row">次の10行を追加</button></td></tr></tfoot></table></div></div>`;
+ return `<div class="box roster-box"><div class="table-scroll roster-scroll"><table class="data-table roster-matrix"><thead><tr><th>番号</th><th>選手</th><th>よみ</th><th>順位対象外</th>${header.map(x=>`<th>${x}</th>`).join('')}</tr></thead><tbody>${rows}</tbody><tfoot><tr class="roster-add-row"><td colspan="${header.length+4}"><button type="button" class="btn" data-action="add-roster-row">次の10行を追加</button></td></tr></tfoot></table></div></div>`;
 }
 function rosterRowState(tr){
  const active=!!tr.querySelector('[data-roster-name]').value.trim();
  tr.classList.toggle('roster-inactive',!active);
  tr.querySelector('[data-roster-kana]').disabled=!active;
+ tr.querySelector('[data-roster-rank-excluded]').disabled=!active;
  tr.querySelectorAll('[data-roster-event]').forEach(button=>button.disabled=!active);
 }
 function rosterNameChange(input){
@@ -279,9 +280,10 @@ function rosterNameChange(input){
    }
   }
   tr.querySelector('[data-roster-kana]').value='';
+  tr.querySelector('[data-roster-rank-excluded]').checked=false;
   tr.querySelectorAll('[data-roster-event]').forEach(button=>{button.setAttribute('aria-pressed','false');button.classList.remove('attending');button.textContent='ー';button.setAttribute('aria-label',button.getAttribute('aria-label').replace(/ (出場|未出場)$/,' 未出場'));});
  }else if(p){p.name=name;}else{
-  ed().players.push({id,name,kana:tr.querySelector('[data-roster-kana]').value.trim(),entries:[]});
+  ed().players.push({id,name,kana:tr.querySelector('[data-roster-kana]').value.trim(),excludeFromRanking:false,entries:[]});
  }
  input.value=name;rosterRowState(tr);save();
 }
@@ -289,6 +291,12 @@ function rosterKanaChange(input){
  const id=Number(input.closest('[data-roster-id]').dataset.rosterId),p=player(id);
  if(!p)return;
  p.kana=input.value.trim();input.value=p.kana;save();
+}
+function rosterRankExclusionChange(input){
+ const id=Number(input.closest('[data-roster-id]').dataset.rosterId),p=player(id);
+ if(!p || !p.name.trim()){input.checked=false;return}
+ p.excludeFromRanking=input.checked;
+ save();
 }
 function rosterEventChange(button){
  const id=Number(button.closest('[data-roster-id]').dataset.rosterId),p=player(id);
@@ -436,7 +444,7 @@ function asCSV(id){const isTwo=id==='two',overall=id==='overall';let h=['順位'
  const safe=s=>{const t=String(s??'');return '"'+(typeof s==='string'&&/^[=+\-@\t\r]/.test(t)?"'":'')+t.replaceAll('"','""')+'"'};return '\ufeff'+lines.map(a=>a.map(safe).join(',')).join('\r\n')}
 function download(name,content,type){const blob=new Blob([content],{type}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),1000)}
 function timestamp(){const d=new Date(),pad=x=>String(x).padStart(2,'0');return `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`}
-function normalizeImport(x){if(!x||x.schema!==1||!Array.isArray(x.editions))throw Error('対応するJSON形式ではありません。');const ids=new Set();for(const e of x.editions){if(typeof e.id!=='string'||typeof e.name!=='string'||ids.has(e.id)||!Array.isArray(e.players)||!Array.isArray(e.matches))throw Error('大会データが不正です。');ids.add(e.id);const pids=new Set();for(const p of e.players){if(!Number.isInteger(p.id)||pids.has(p.id)||!String(p.name||'').trim())throw Error('選手マスタに重複・不正値があります。');pids.add(p.id)}const mids=new Set();for(const m of e.matches){if(typeof m.id!=='string'||mids.has(m.id))throw Error('試合IDの重複があります。');mids.add(m.id);const issue=validMatch(m,pids);if(issue)throw Error(`${e.name}: ${issue}`)} if(e.waitingPlayers!==undefined){
+function normalizeImport(x){if(!x||x.schema!==1||!Array.isArray(x.editions))throw Error('対応するJSON形式ではありません。');const ids=new Set();for(const e of x.editions){if(typeof e.id!=='string'||typeof e.name!=='string'||ids.has(e.id)||!Array.isArray(e.players)||!Array.isArray(e.matches))throw Error('大会データが不正です。');ids.add(e.id);const pids=new Set();for(const p of e.players){if(!Number.isInteger(p.id)||pids.has(p.id)||!String(p.name||'').trim())throw Error('選手マスタに重複・不正値があります。');if(p.excludeFromRanking!==undefined&&typeof p.excludeFromRanking!=='boolean')throw Error('順位対象外の設定が不正です。');pids.add(p.id)}const mids=new Set();for(const m of e.matches){if(typeof m.id!=='string'||mids.has(m.id))throw Error('試合IDの重複があります。');mids.add(m.id);const issue=validMatch(m,pids);if(issue)throw Error(`${e.name}: ${issue}`)} if(e.waitingPlayers!==undefined){
   if(!e.waitingPlayers||typeof e.waitingPlayers!=='object'||Array.isArray(e.waitingPlayers))throw Error('対戦待ちデータが不正です。');
   for(const [key,list] of Object.entries(e.waitingPlayers)){
    if(!eventIds.includes(key)||!Array.isArray(list)||list.some(id=>!Number.isInteger(id)||!pids.has(id))||new Set(list).size!==list.length)throw Error('対戦待ちに無効な選手番号があります。');
@@ -511,7 +519,7 @@ document.querySelectorAll('[data-header-action]').forEach(b=>b.addEventListener(
 renderHeaderEvent();
 $('header-event').addEventListener('change',e=>{activeEvent=e.target.value;editingMatch=null;preselectedPair=null;historySearch='';render()});
 $('app').addEventListener('submit',e=>{if(e.target.id==='match-form'){e.preventDefault();matchSave(e.target)}});
-$('app').addEventListener('change',e=>{if(e.target.id==='edition-picker'){data.activeEditionId=e.target.value;activeEvent='day1';$('header-event').value='day1';editingMatch=null;save();render()}else if(e.target.id==='edition-name-input'){const name=e.target.value.trim();if(!name){e.target.value=ed().name;return}ed().name=name;save();render();notice('大会名を保存しました。')}else if(e.target.matches('[data-match-side]')){syncMatchPlayer(e.target);if(e.target.matches('input[data-match-side]')&&e.target.value!==''&&!isEventEntrant(ed(),activeEvent,Number(e.target.value))){const wrong=e.target.value;e.target.value='';syncMatchPlayer(e.target);notice(`#${wrong} は${evLabel(activeEvent)}に出場登録されていません。`);}}else if(['result','points'].includes(e.target.name)&&e.target.closest('#match-form')){updateSubmitEnabled(e.target.closest('#match-form'))}else if(e.target.id==='edition-venue-input'){ed().venue=e.target.value.trim();save();render()}else if(e.target.id==='edition-date-input'){const day=activeEvent==='overall'?'day3':activeEvent;ed().dates=ed().dates||{};ed().dates[day]=e.target.value;if(day==='day3')ed().dates.overall=e.target.value;save();render()}else if(e.target.matches('[data-roster-name]')){rosterNameChange(e.target)}else if(e.target.matches('[data-roster-kana]')){rosterKanaChange(e.target)}});
+$('app').addEventListener('change',e=>{if(e.target.id==='edition-picker'){data.activeEditionId=e.target.value;activeEvent='day1';$('header-event').value='day1';editingMatch=null;save();render()}else if(e.target.id==='edition-name-input'){const name=e.target.value.trim();if(!name){e.target.value=ed().name;return}ed().name=name;save();render();notice('大会名を保存しました。')}else if(e.target.matches('[data-match-side]')){syncMatchPlayer(e.target);if(e.target.matches('input[data-match-side]')&&e.target.value!==''&&!isEventEntrant(ed(),activeEvent,Number(e.target.value))){const wrong=e.target.value;e.target.value='';syncMatchPlayer(e.target);notice(`#${wrong} は${evLabel(activeEvent)}に出場登録されていません。`);}}else if(['result','points'].includes(e.target.name)&&e.target.closest('#match-form')){updateSubmitEnabled(e.target.closest('#match-form'))}else if(e.target.id==='edition-venue-input'){ed().venue=e.target.value.trim();save();render()}else if(e.target.id==='edition-date-input'){const day=activeEvent==='overall'?'day3':activeEvent;ed().dates=ed().dates||{};ed().dates[day]=e.target.value;if(day==='day3')ed().dates.overall=e.target.value;save();render()}else if(e.target.matches('[data-roster-name]')){rosterNameChange(e.target)}else if(e.target.matches('[data-roster-kana]')){rosterKanaChange(e.target)}else if(e.target.matches('[data-roster-rank-excluded]')){rosterRankExclusionChange(e.target)}});
 $('app').addEventListener('click',e=>{const rosterToggle=e.target.closest('[data-roster-event]');if(rosterToggle){rosterEventChange(rosterToggle);return}const win=e.target.closest('[data-winner-button]');if(win){const form=win.closest('#match-form');setWinner(form,form.dataset.winner===win.dataset.winnerButton?'':win.dataset.winnerButton);return}const draw=e.target.closest('[data-draw-button]');if(draw){const form=draw.closest('#match-form');setWinner(form,form.dataset.winner==='draw'?'':'draw');return}const b=e.target.closest('[data-action]');if(!b)return;if(b.dataset.action==='pick-pair'){
  const a=Number(b.dataset.a),c=Number(b.dataset.b);
  if(!unplayedPairs(ed(),activeEvent).some(p=>p.a===Math.min(a,c)&&p.b===Math.max(a,c))){notice('この組み合わせは斡旋できません。');render();return}

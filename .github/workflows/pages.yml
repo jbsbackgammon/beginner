@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: read
+  actions: read
   pages: write
   id-token: write
 
@@ -23,7 +24,7 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: ソースを取得
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
 
       - name: 公開ファイルを生成（キャッシュ対策）
         run: python3 build_pages.py --output _site --revision "$GITHUB_SHA"
@@ -34,8 +35,41 @@ jobs:
       - name: 公開データをアップロード
         uses: actions/upload-pages-artifact@v5
         with:
+          name: github-pages-${{ github.run_attempt }}
           path: _site
+
+      - name: Wait for Pages artifact metadata
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ARTIFACT_NAME: github-pages-${{ github.run_attempt }}
+        run: |
+          stable=0
+          for attempt in {1..20}; do
+            if count=$(gh api --method GET "repos/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID/artifacts" -f per_page=100 | jq --arg name "$ARTIFACT_NAME" '[.artifacts[] | select(.name == $name and .expired == false)] | length'); then
+              if [ "$count" = "1" ]; then
+                stable=$((stable + 1))
+                echo "Pages artifact $ARTIFACT_NAME visible ($stable/4)."
+                if [ "$stable" = "4" ]; then
+                  echo "Pages artifact $ARTIFACT_NAME is consistently available."
+                  exit 0
+                fi
+              elif [ "$count" -gt 1 ]; then
+                echo "::error::Multiple artifacts named $ARTIFACT_NAME"
+                exit 1
+              else
+                stable=0
+              fi
+            else
+              stable=0
+            fi
+            echo "Waiting for artifact metadata to stabilize (attempt $attempt/20)"
+            sleep 5
+          done
+          echo "::error::Pages artifact $ARTIFACT_NAME did not become available."
+          exit 1
 
       - name: GitHub Pages に公開
         id: deployment
         uses: actions/deploy-pages@v5
+        with:
+          artifact_name: github-pages-${{ github.run_attempt }}
